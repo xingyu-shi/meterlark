@@ -5,15 +5,6 @@ import XCTest
 final class DashboardLayoutDraftTests: XCTestCase {
     private let order = ["builtIn.summary", "builtIn.budget", "builtIn.daily"]
 
-    func testNativeDragTransferRoundTripsNamespacedComponentID() async throws {
-        guard #available(macOS 15.2, *) else { throw XCTSkip("Transferable round-trip API requires macOS 15.2") }
-        let source = DashboardComponentDrag(componentID: "plugin.16:com.example.test.5:daily")
-        let data = try await source.exported(as: DashboardComponentDrag.contentType)
-        let imported = try await DashboardComponentDrag(importing: data, contentType: DashboardComponentDrag.contentType)
-        XCTAssertEqual(imported.componentID, source.componentID)
-        XCTAssertTrue(DashboardComponentDrag.contentType.conforms(to: .json))
-    }
-
     func testRemovingAndRestoringKeepsPositionAndColumnSettings() {
         let draft = DashboardLayoutDraft(
             layout: DashboardLayout(componentOrder: order, componentColumns: [order[0]: 3]),

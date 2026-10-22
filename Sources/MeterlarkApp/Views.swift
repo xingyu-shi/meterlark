@@ -40,6 +40,7 @@ struct MonitorPopover: View {
     @State private var isNotificationFeedPresented = false
     @State private var measuredContentHeight: Double?
     @State private var maximumVisibleHeight: Double?
+    @StateObject private var componentDrag = DashboardPreviewDragState()
 
     init(
         store: MonitorStore,
@@ -73,7 +74,7 @@ struct MonitorPopover: View {
                 header
                 ForEach(store.visibleDashboardComponents(for: layoutOverride)) { component in
                     if let editingDraft {
-                        EditableDashboardComponent(component: component, draft: editingDraft, copy: copy) {
+                        EditableDashboardComponent(component: component, draft: editingDraft, drag: componentDrag, copy: copy) {
                             dashboardComponentView(component)
                         }
                     } else {
@@ -81,6 +82,10 @@ struct MonitorPopover: View {
                     }
                 }
                 footer
+            }
+            .coordinateSpace(name: DashboardPreviewDragState.coordinateSpace)
+            .onPreferenceChange(DashboardComponentFramesKey.self) { frames in
+                if componentDrag.frames != frames { componentDrag.frames = frames }
             }
             .padding(CGFloat(store.settings.interfaceTextSize.contentPadding))
             .background {
