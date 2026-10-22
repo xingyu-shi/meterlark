@@ -1,0 +1,251 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="2070" viewBox="0 0 1280 2070" role="img" aria-labelledby="title desc">
+  <title id="title">Meterlark current usage refresh flow</title>
+  <desc id="desc">A complete flow of the five-second scheduler, FSEvents watcher, fallback fingerprint scan, dirty gating, usage refresh, and pricing refresh.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fafbfc"/>
+      <stop offset="1" stop-color="#eef1f5"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0ea5e9"/>
+      <stop offset="1" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d9488"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#64748b"/>
+      <stop offset="1" stop-color="#475569"/>
+    </linearGradient>
+    <linearGradient id="orange" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f97316"/>
+      <stop offset="1" stop-color="#ef4444"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+      <feOffset dx="0" dy="1"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.12"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowGreen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"/>
+    </marker>
+    <marker id="arrowOrange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444"/>
+    </marker>
+    <style>
+      .title { font: 700 28px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #0f172a; }
+      .subtitle { font: 400 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #64748b; }
+      .section { font: 600 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; letter-spacing: 1.5px; fill: #64748b; }
+      .nodeTitle { font: 700 16px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #fff; }
+      .nodePath { font: 400 10px ui-monospace, Menlo, monospace; fill: #dbeafe; }
+      .body { font: 400 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #e2e8f0; }
+      .bodyDark { font: 400 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #334155; }
+      .bodyMuted { font: 400 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #64748b; }
+      .code { font: 400 10px ui-monospace, Menlo, monospace; fill: #cffafe; }
+      .codeDark { font: 400 10px ui-monospace, Menlo, monospace; fill: #334155; }
+      .pillTitle { font: 700 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #0e7490; }
+      .pillBody { font: 400 9.5px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #475569; }
+      .calloutTitle { font: 700 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #0f172a; }
+      .calloutBody { font: 400 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #475569; }
+      .arrowLabel { font: 600 10px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #475569; }
+      .warningTitle { font: 700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #9a3412; }
+      .warningBody { font: 400 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #7c2d12; }
+      .footerTitle { font: 700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #0f172a; }
+      .footerBody { font: 400 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect width="1280" height="2070" fill="url(#bg)"/>
+  <text x="64" y="58" class="title">Meterlark · 当前用量刷新流程</text>
+  <text x="64" y="86" class="subtitle">重点：5 秒 timer 只检查调度条件；usage refresh 仍然依赖 dirty 信号。</text>
+
+  <text x="64" y="126" class="section">RUNTIME ENTRY</text>
+  <g filter="url(#cardShadow)">
+    <rect x="64" y="145" width="1152" height="150" rx="14" fill="url(#dark)"/>
+    <text x="88" y="180" class="nodeTitle">MonitorStore 初始化</text>
+    <text x="88" y="201" class="nodePath">MonitorStore.init → startMonitoring()</text>
+    <rect x="88" y="222" width="328" height="48" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="104" y="242" class="pillTitle">加载本地状态</text>
+    <text x="104" y="258" class="pillBody">snapshot · settings · custom pricing</text>
+    <rect x="432" y="222" width="328" height="48" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="448" y="242" class="pillTitle">安装 FSEvents watcher</text>
+    <text x="448" y="258" class="pillBody">监听各 Agent 数据目录</text>
+    <rect x="776" y="222" width="416" height="48" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="792" y="242" class="pillTitle">启动 5 秒 Timer</text>
+    <text x="792" y="258" class="pillBody">Timer 只是 periodicCheck，不是 usage refresh</text>
+  </g>
+
+  <line x1="640" y1="295" x2="640" y2="340" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="653" y="322" class="arrowLabel">启动两条并行路径</text>
+
+  <text x="64" y="370" class="section">SCHEDULER + EVENT SOURCES</text>
+  <g filter="url(#cardShadow)">
+    <rect x="64" y="390" width="550" height="170" rx="14" fill="url(#teal)"/>
+    <text x="88" y="425" class="nodeTitle">5 秒 Timer：调度检查器</text>
+    <text x="88" y="446" class="nodePath">Timer.scheduledTimer(withTimeInterval: 5)</text>
+    <rect x="88" y="468" width="502" height="67" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="104" y="489" class="pillTitle">每 5 秒调用 periodicCheck()</text>
+    <text x="104" y="506" class="pillBody">检查 watcher 状态、fallback、dirty、settle、interval、in-flight</text>
+    <text x="104" y="521" class="pillBody">不满足条件时：什么也不刷新，只等待下一轮检查</text>
+  </g>
+  <g filter="url(#cardShadow)">
+    <rect x="666" y="390" width="550" height="170" rx="14" fill="url(#slate)"/>
+    <text x="690" y="425" class="nodeTitle">FSEvents watcher：事件监听器</text>
+    <text x="690" y="446" class="nodePath">SourceChangeWatcher.start()</text>
+    <rect x="690" y="468" width="502" height="67" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="706" y="489" class="pillTitle">监听文件变化</text>
+    <text x="706" y="506" class="pillBody">Agent 写入新 session / 修改数据文件</text>
+    <text x="706" y="521" class="pillBody">事件回调 → MonitorStore.markDirty()</text>
+  </g>
+
+  <line x1="339" y1="560" x2="339" y2="605" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="941" y1="560" x2="941" y2="605" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g filter="url(#cardShadow)">
+    <rect x="64" y="625" width="550" height="215" rx="14" fill="url(#blue)"/>
+    <text x="88" y="660" class="nodeTitle">periodicCheck()</text>
+    <text x="88" y="681" class="nodePath">每 5 秒一轮，主线程执行</text>
+    <rect x="88" y="704" width="502" height="108" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="104" y="725" class="pillTitle">检查顺序</text>
+    <text x="104" y="743" class="pillBody">1. scope 是否跨天 / lookback 是否变化</text>
+    <text x="104" y="759" class="pillBody">2. source roots 是否变化，必要时重装 watcher</text>
+    <text x="104" y="775" class="pillBody">3. watcher 不可用时，是否到 fallback 检查时间</text>
+    <text x="104" y="791" class="pillBody">4. dirty + settle + interval + no in-flight 是否全部满足</text>
+  </g>
+  <g filter="url(#cardShadow)">
+    <rect x="666" y="625" width="550" height="215" rx="14" fill="url(#slate)"/>
+    <text x="690" y="660" class="nodeTitle">Agent 数据源变化</text>
+    <text x="690" y="681" class="nodePath">FSEventStream callback</text>
+    <rect x="690" y="704" width="502" height="108" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="706" y="725" class="pillTitle">正常事件链</text>
+    <text x="706" y="743" class="pillBody">文件写入 → FSEvents callback</text>
+    <text x="706" y="759" class="pillBody">→ markDirty()</text>
+    <text x="706" y="775" class="pillBody">dirtyGeneration += 1</text>
+    <text x="706" y="791" class="pillBody">等待至少 2 秒没有新事件后进入 refresh gate</text>
+  </g>
+
+  <line x1="339" y1="840" x2="339" y2="890" stroke="#2563eb" stroke-width="2" marker-end="url(#arrowBlue)"/>
+  <line x1="941" y1="840" x2="941" y2="1250" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="958" y="1055" class="arrowLabel">markDirty()</text>
+
+  <g filter="url(#cardShadow)">
+    <rect x="64" y="890" width="550" height="155" rx="14" fill="url(#green)"/>
+    <text x="88" y="925" class="nodeTitle">判断 watcher 是否可用</text>
+    <text x="88" y="946" class="nodePath">watcher?.isRunning != true || pendingWatcherRoots != nil</text>
+    <rect x="88" y="970" width="226" height="50" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="104" y="991" class="pillTitle">YES：watcher 不可用</text>
+    <text x="104" y="1007" class="pillBody">进入 fallback 分支</text>
+    <rect x="330" y="970" width="236" height="50" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="346" y="991" class="pillTitle">NO：watcher 正常</text>
+    <text x="346" y="1007" class="pillBody">不做 fallback 扫描</text>
+  </g>
+
+  <line x1="205" y1="1045" x2="205" y2="1090" stroke="#059669" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <line x1="480" y1="1045" x2="480" y2="1090" stroke="#ef4444" stroke-width="2" marker-end="url(#arrowOrange)"/>
+
+  <g filter="url(#cardShadow)">
+    <rect x="64" y="1090" width="260" height="150" rx="14" fill="url(#green)"/>
+    <text x="88" y="1125" class="nodeTitle">Fallback fingerprint</text>
+    <text x="88" y="1146" class="nodePath">递归扫描相关目录</text>
+    <text x="88" y="1172" class="body">到 refreshInterval 才检查</text>
+    <text x="88" y="1190" class="body">发现 fingerprint 变化</text>
+    <text x="88" y="1208" class="body">→ markDirty()</text>
+    <text x="88" y="1226" class="body">并按 max(interval/3, 5s) 重试 watcher</text>
+  </g>
+  <g filter="url(#cardShadow)">
+    <rect x="354" y="1090" width="260" height="150" rx="14" fill="url(#orange)"/>
+    <text x="378" y="1125" class="nodeTitle">不做 fallback scan</text>
+    <text x="378" y="1146" class="nodePath">当前 watcher 被认为正常</text>
+    <text x="378" y="1172" class="body">5 秒 timer 仍会运行</text>
+    <text x="378" y="1190" class="body">但没有 dirty 就不会刷新</text>
+    <text x="378" y="1208" class="body">等待下一次 FSEvents 事件</text>
+  </g>
+
+  <path d="M 324 1165 C 430 1165, 470 1260, 520 1260" fill="none" stroke="#059669" stroke-width="2" marker-end="url(#arrowGreen)"/>
+  <path d="M 614 1165 C 680 1165, 720 1260, 760 1260" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrowOrange)"/>
+
+  <g>
+    <rect x="666" y="890" width="550" height="155" rx="14" fill="#fff7ed" stroke="#f97316" stroke-width="1.5" stroke-dasharray="6 4" filter="url(#softShadow)"/>
+    <text x="690" y="925" class="warningTitle">关键缺口：FSEvents “运行中但漏事件”</text>
+    <text x="690" y="952" class="warningBody">如果 watcher 已经启动，但某次文件变化没有收到 callback：</text>
+    <text x="690" y="972" class="warningBody">fallback 不会启动；这次变化不会 markDirty。</text>
+    <text x="690" y="1000" class="warningBody">结果：可能超过 1 分钟，甚至一直不更新，</text>
+    <text x="690" y="1020" class="warningBody">直到下一次事件、手动 Refresh 或重启。</text>
+  </g>
+
+  <line x1="640" y1="1240" x2="640" y2="1285" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="653" y="1268" class="arrowLabel">所有触发路径汇合</text>
+
+  <g filter="url(#cardShadow)">
+    <rect x="64" y="1300" width="1152" height="175" rx="14" fill="url(#dark)"/>
+    <text x="88" y="1335" class="nodeTitle">Refresh gate：什么时候真正启动 usage refresh？</text>
+    <text x="88" y="1356" class="nodePath">periodicCheck() → beginRefresh(intent: .usage)</text>
+    <rect x="88" y="1380" width="1080" height="67" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="104" y="1401" class="pillTitle">必须同时满足</text>
+    <text x="104" y="1418" class="pillBody">isDirty = true  ·  最近事件已安静至少 2 秒  ·  距离上次 refresh 启动 ≥ 配置间隔  ·  没有 refresh / pricing in-flight</text>
+    <text x="104" y="1435" class="pillBody">任何一个条件不满足：本轮 5 秒检查结束，不执行 ccusage。</text>
+  </g>
+
+  <line x1="640" y1="1475" x2="640" y2="1520" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g filter="url(#cardShadow)">
+    <rect x="64" y="1535" width="550" height="205" rx="14" fill="url(#blue)"/>
+    <text x="88" y="1570" class="nodeTitle">Usage refresh：本地用量刷新</text>
+    <text x="88" y="1591" class="nodePath">CCUsageRunMode.usage</text>
+    <rect x="88" y="1615" width="502" height="92" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="104" y="1636" class="pillTitle">实际命令</text>
+    <text x="104" y="1654" class="codeDark">daily --by-agent --breakdown --json</text>
+    <text x="104" y="1671" class="codeDark">--offline --no-cost --since ... --until ...</text>
+    <text x="104" y="1690" class="pillBody">更新 token；保留可信旧 cost；成功后清 dirty</text>
+  </g>
+  <g filter="url(#cardShadow)">
+    <rect x="666" y="1535" width="550" height="205" rx="14" fill="url(#green)"/>
+    <text x="690" y="1570" class="nodeTitle">Pricing refresh：独立价格刷新</text>
+    <text x="690" y="1591" class="nodePath">automatic / manual · 默认 24 小时</text>
+    <rect x="690" y="1615" width="502" height="92" rx="7" fill="#f8fafc" opacity="0.94"/>
+    <text x="706" y="1636" class="pillTitle">触发条件</text>
+    <text x="706" y="1654" class="pillBody">usage 成功后，如果 pricingIsDue 且没有 dirty</text>
+    <text x="706" y="1671" class="pillBody">在线 pricing 失败 → 保留旧价格 / 尝试 offline fallback</text>
+    <text x="706" y="1690" class="pillBody">pricing in-flight 时会阻塞 usage refresh</text>
+  </g>
+
+  <path d="M 614 1638 C 630 1638, 646 1638, 666 1638" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="624" y="1625" class="arrowLabel">usage 成功后可进入</text>
+
+  <g>
+    <rect x="64" y="1785" width="1152" height="115" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" filter="url(#softShadow)"/>
+    <text x="88" y="1820" class="footerTitle">所以，1 min 现在真正表示什么？</text>
+    <text x="88" y="1847" class="footerBody">“收到 dirty 变化后，两次 usage refresh 的最短间隔是 1 分钟”。它不是 heartbeat，</text>
+    <text x="88" y="1866" class="footerBody">也不是“每分钟主动执行一次 ccusage”。没有 dirty，5 秒 timer 只检查，不刷新。</text>
+  </g>
+
+  <g>
+    <rect x="64" y="1930" width="1152" height="90" rx="10" fill="#fff7ed" stroke="#f97316" stroke-width="1.5"/>
+    <text x="88" y="1964" class="warningTitle">当前需要修复的设计缺口</text>
+    <text x="88" y="1989" class="warningBody">FSEvents 已启动但漏掉单个事件时，没有 fallback 兜底，因此可能长期不刷新。</text>
+  </g>
+
+  <text x="64" y="2050" class="bodyMuted">Source: MonitorStore.swift · SourceChangeWatcher.swift · SnapshotStore.swift · current working tree</text>
+</svg>

@@ -1,0 +1,62 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.meterlark.model-catalog",
+  "displayName": {
+    "fallback": "Example Model Catalog",
+    "translations": { "zh-Hans": "Example 模型目录" }
+  },
+  "version": "1.0.0",
+  "protocolVersion": 1,
+  "transport": "http-json",
+  "capabilities": ["model-catalog"],
+  "configuration": {
+    "version": 1,
+    "title": {
+      "fallback": "Example Model Catalog",
+      "translations": { "zh-Hans": "Example 模型目录" }
+    },
+    "description": {
+      "fallback": "Configure the ExampleGateway model information API key.",
+      "translations": { "zh-Hans": "配置 ExampleGateway 模型信息 API key。" }
+    },
+    "fields": [
+      {
+        "id": "endpoint",
+        "label": {
+          "fallback": "Model info endpoint",
+          "translations": { "zh-Hans": "模型信息接口" }
+        },
+        "kind": "url",
+        "required": true,
+        "defaultValue": "https://gateway.example.test/v1/models"
+      },
+      {
+        "id": "apiKey",
+        "label": {
+          "fallback": "ExampleGateway API key",
+          "translations": { "zh-Hans": "ExampleGateway API key" }
+        },
+        "kind": "secret",
+        "required": true,
+        "placeholder": {
+          "fallback": "Paste the ExampleGateway API key",
+          "translations": { "zh-Hans": "粘贴 ExampleGateway API key" }
+        }
+      }
+    ]
+  },
+  "http": {
+    "method": "GET",
+    "urlField": "endpoint",
+    "headers": [
+      { "name": "Accept", "value": "application/json" },
+      {
+        "name": "Authorization",
+        "valueField": "apiKey",
+        "valuePrefix": "Bearer "
+      }
+    ],
+    "timeoutSeconds": 30,
+    "conditions": []
+  }
+}

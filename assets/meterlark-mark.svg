@@ -1,0 +1,10 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Meterlark mark</title>
+  <desc>A high-contrast signal lens for local LLM activity.</desc>
+
+  <rect x="32" y="32" width="960" height="960" rx="252" fill="#17191C"/>
+  <rect x="32.5" y="32.5" width="959" height="959" rx="251.5" stroke="#34383C"/>
+
+  <path d="M399 288H266V421M625 288H758V421M758 603V736H625M399 736H266V603" stroke="#F2F0EA" stroke-width="74" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="450" y="450" width="124" height="124" rx="24" fill="#F2F0EA"/>
+</svg>

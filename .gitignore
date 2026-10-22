@@ -1,0 +1,14 @@
+.build/
+.swiftpm/
+DerivedData/
+.DS_Store
+dist/
+.idea
+.env
+.env.*
+!.env.example
+*.bundle
+*.pem
+*.p12
+*.pfx
+.private/

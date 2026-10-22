@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Meterlark</string>
+	<key>CFBundleExecutable</key>
+	<string>Meterlark</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.xingyu.meterlark</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>Meterlark</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleIconFile</key>
+	<string>Meterlark-mark.png</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.1.1</string>
+	<key>CFBundleVersion</key>
+	<string>25</string>
+	<key>CCUsageVersion</key>
+	<string>20.0.32</string>
+	<key>CCUsageSHA256</key>
+	<string>8df7988841d6236ea6a6573718866a1ef3957379fa181754dfee8f701412a57a</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>LSMultipleInstancesProhibited</key>
+	<true/>
+</dict>
+</plist>

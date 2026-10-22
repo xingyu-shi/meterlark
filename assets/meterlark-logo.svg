@@ -1,0 +1,15 @@
+<svg width="1280" height="480" viewBox="0 0 1280 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>Meterlark logo</title>
+  <desc>A high-contrast signal lens for local LLM activity with wordmark.</desc>
+
+  <g transform="translate(93 0)">
+    <rect x="24" y="24" width="432" height="432" rx="112" fill="#17191C"/>
+    <rect x="24.5" y="24.5" width="431" height="431" rx="111.5" stroke="#34383C"/>
+
+    <path d="M171 135H91V215M309 135H389V215M389 265V345H309M171 345H91V265" stroke="#F2F0EA" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="201" y="201" width="78" height="78" rx="15" fill="#F2F0EA"/>
+
+    <text x="536" y="245" fill="#17191C" font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="116" font-weight="700" letter-spacing="-6">meterlark</text>
+    <text x="548" y="324" fill="#737A82" font-family="Avenir Next, Helvetica Neue, sans-serif" font-size="38" font-weight="600" letter-spacing="10">AI USAGE</text>
+  </g>
+</svg>

@@ -1,0 +1,287 @@
+{
+  "manifestVersion": 1,
+  "id": "com.example.meterlark.gateway",
+  "displayName": {
+    "fallback": "Example Gateway",
+    "translations": { "zh-Hans": "Example Gateway" }
+  },
+  "version": "1.0.1",
+  "protocolVersion": 2,
+  "transport": "http-json",
+  "configuration": {
+    "version": 1,
+    "title": {
+      "fallback": "Example Gateway",
+      "translations": { "zh-Hans": "Example Gateway" }
+    },
+    "description": {
+      "fallback": "Configure the Example Gateway cost and token refresh endpoints.",
+      "translations": { "zh-Hans": "配置 Example Gateway 费用接口和 token 刷新接口。" }
+    },
+    "fields": [
+      {
+        "id": "endpoint",
+        "label": {
+          "fallback": "Endpoint",
+          "translations": { "zh-Hans": "接口地址" }
+        },
+        "kind": "url",
+        "required": true,
+        "defaultValue": "https://gateway.example.test/v1/cost/current"
+      },
+      {
+        "id": "refreshEndpoint",
+        "label": {
+          "fallback": "Refresh endpoint",
+          "translations": { "zh-Hans": "刷新接口" }
+        },
+        "kind": "url",
+        "required": true,
+        "defaultValue": "https://gateway.example.test/oauth/token"
+      },
+      {
+        "id": "refreshToken",
+        "label": {
+          "fallback": "Refresh token",
+          "translations": { "zh-Hans": "Refresh token" }
+        },
+        "kind": "secret",
+        "required": true,
+        "placeholder": {
+          "fallback": "Paste the refresh token",
+          "translations": { "zh-Hans": "粘贴 refresh token" }
+        }
+      }
+    ]
+  },
+  "http": {
+    "method": "GET",
+    "urlField": "endpoint",
+    "headers": [
+      { "name": "Accept", "value": "application/json" }
+    ],
+    "timeoutSeconds": 20,
+    "auth": {
+      "version": 1,
+      "profileID": "default",
+      "refreshURLField": "refreshEndpoint",
+      "refreshTokenField": "refreshToken",
+      "encoding": "json",
+      "refreshTokenParameter": "refresh",
+      "grantTypeParameter": null,
+      "grantTypeValue": null,
+      "accessTokenPath": "/access",
+      "refreshTokenPath": "/refresh",
+      "expiresInPath": null,
+      "accessTokenHeader": "Authorization",
+      "headerMode": "raw",
+      "timeoutSeconds": 20,
+      "expirySkewSeconds": 300,
+      "missingExpiryPolicy": "unauthorized-retry",
+      "tokenExpiredStatusCodes": [400, 401]
+    },
+    "conditions": [
+      { "path": "/success", "operator": "equals", "value": true },
+      { "path": "/code", "operator": "equals", "value": 0 }
+    ]
+  },
+  "dashboard": {
+    "version": 1,
+    "blocks": [
+      {
+        "type": "metricGrid",
+        "id": "summary",
+        "columns": 2,
+        "tiles": [
+          {
+            "id": "today-cost",
+            "header": {
+              "literal": {
+                "fallback": "Today cost",
+                "translations": { "zh-Hans": "今日费用" }
+              }
+            },
+            "primary": { "kind": "currency", "path": "/data/today_cost" },
+            "detail": {
+              "path": "/data/daily_quota",
+              "format": "currency",
+              "prefix": {
+                "fallback": "Daily quota: ",
+                "translations": { "zh-Hans": "每日额度：" }
+              }
+            }
+          },
+          {
+            "id": "today-remaining",
+            "header": {
+              "literal": {
+                "fallback": "Today remaining",
+                "translations": { "zh-Hans": "今日剩余额度" }
+              }
+            },
+            "primary": { "kind": "currency", "path": "/data/daily_remaining_quota" },
+            "detail": {
+              "path": "/data/daily_quota",
+              "format": "currency",
+              "prefix": {
+                "fallback": "Daily quota: ",
+                "translations": { "zh-Hans": "每日额度：" }
+              }
+            }
+          },
+          {
+            "id": "monthly-cost",
+            "header": {
+              "literal": {
+                "fallback": "Monthly cost",
+                "translations": { "zh-Hans": "本月费用" }
+              }
+            },
+            "primary": { "kind": "currency", "path": "/data/monthly_cost" },
+            "detail": {
+              "path": "/data/monthly_quota",
+              "format": "currency",
+              "prefix": {
+                "fallback": "Monthly quota: ",
+                "translations": { "zh-Hans": "每月额度：" }
+              }
+            }
+          },
+          {
+            "id": "monthly-remaining",
+            "header": {
+              "literal": {
+                "fallback": "Monthly remaining",
+                "translations": { "zh-Hans": "每月剩余额度" }
+              }
+            },
+            "primary": { "kind": "currency", "path": "/data/monthly_remaining_quota" },
+            "detail": {
+              "path": "/data/monthly_quota",
+              "format": "currency",
+              "prefix": {
+                "fallback": "Monthly quota: ",
+                "translations": { "zh-Hans": "每月额度：" }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "type": "progressList",
+        "id": "quotas",
+        "header": {
+          "title": {
+            "literal": {
+              "fallback": "Quotas",
+              "translations": { "zh-Hans": "额度" }
+            }
+          },
+          "subtitle": {
+            "path": "/data/username",
+            "prefix": {
+              "fallback": "Account: ",
+              "translations": { "zh-Hans": "账户：" }
+            }
+          }
+        },
+        "items": [
+          {
+            "type": "progress",
+            "id": "daily",
+            "label": {
+              "literal": {
+                "fallback": "Daily quota",
+                "translations": { "zh-Hans": "每日额度" }
+              }
+            },
+            "current": { "path": "/data/today_cost" },
+            "maximum": { "path": "/data/daily_quota" },
+            "valueFormat": "currency",
+            "statusRule": {
+              "condition": {
+                "leftPath": "/data/today_cost",
+                "operator": "greaterThanOrEqual",
+                "rightPath": "/data/daily_quota"
+              },
+              "whenTrue": {
+                "kind": "alert",
+                "text": {
+                  "literal": {
+                    "fallback": "Quota reached",
+                    "translations": { "zh-Hans": "已达到额度" }
+                  }
+                }
+              },
+              "whenFalse": {
+                "kind": "normal",
+                "text": {
+                  "literal": {
+                    "fallback": "Below quota",
+                    "translations": { "zh-Hans": "未达到额度" }
+                  }
+                }
+              },
+              "whenMissing": {
+                "kind": "noData",
+                "text": {
+                  "literal": {
+                    "fallback": "No data",
+                    "translations": { "zh-Hans": "暂无数据" }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "progress",
+            "id": "monthly",
+            "label": {
+              "literal": {
+                "fallback": "Monthly quota",
+                "translations": { "zh-Hans": "每月额度" }
+              }
+            },
+            "current": { "path": "/data/monthly_cost" },
+            "maximum": { "path": "/data/monthly_quota" },
+            "valueFormat": "currency",
+            "statusRule": {
+              "condition": {
+                "leftPath": "/data/monthly_cost",
+                "operator": "greaterThanOrEqual",
+                "rightPath": "/data/monthly_quota"
+              },
+              "whenTrue": {
+                "kind": "alert",
+                "text": {
+                  "literal": {
+                    "fallback": "Quota reached",
+                    "translations": { "zh-Hans": "已达到额度" }
+                  }
+                }
+              },
+              "whenFalse": {
+                "kind": "normal",
+                "text": {
+                  "literal": {
+                    "fallback": "Below quota",
+                    "translations": { "zh-Hans": "未达到额度" }
+                  }
+                }
+              },
+              "whenMissing": {
+                "kind": "noData",
+                "text": {
+                  "literal": {
+                    "fallback": "No data",
+                    "translations": { "zh-Hans": "暂无数据" }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
