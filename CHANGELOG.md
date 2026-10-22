@@ -8,7 +8,8 @@
 
 ### Changed
 
-- Draw solid surfaces with an opaque background that opts out of vibrancy, and apply appearance settings to the plugin paste window.
+- Apply appearance settings to the plugin paste window.
+- Build release packages with the native SwiftPM engine and verify the linked SDK version, avoiding incorrect system UI behavior from SwiftPM 6.4's default engine.
 - Establish Meterlark as an independent macOS menu-bar application for AI coding usage, cost estimates, budgets, and extensible dashboards.
 - Use Meterlark bundle, settings, data-directory, and Keychain identities.
 - Keep the plugin host independent of any organization-specific service. Provide optional reserved-domain gateway and model-catalog examples for plugin authors.

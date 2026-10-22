@@ -10,9 +10,12 @@ Before publishing source or an app archive:
    [Gitleaks](https://github.com/gitleaks/gitleaks). Scan every branch and tag
    being published. A clean current tree does not establish that its history
    is clean. Investigate scanner findings without printing candidate secrets.
-3. Run `swift test`, then `./scripts/package-app.sh`. The package script
+3. Run `swift test --build-system native`, then `./scripts/package-app.sh`. The package script
    recreates its app bundle, validates the pinned reporting engine, checks
-   signing and architecture, and verifies the ZIP archive.
+   signing and architecture, verifies the linked SDK version, and checks the ZIP archive.
+   It uses the native build engine to avoid
+   [SwiftPM's incorrect SDK stamp](https://github.com/swiftlang/swift-package-manager/issues/10696),
+   which can change AppKit and SwiftUI behavior even when the source is unchanged.
 4. Inspect the archive for unintended plugins, local configuration, logs,
    credentials, personal metadata, and build paths. Examples use reserved
    domains and are distributed only as source templates.

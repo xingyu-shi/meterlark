@@ -118,7 +118,7 @@ This source revision bundles `ccusage 20.0.32` and recognizes these local harnes
 ### Distribution
 
 Build Meterlark from source with the steps below. The packaging script produces
-`dist/Meterlark.app` and `dist/Meterlark-1.2.1-arm64.zip`. Published archives, when
+`dist/Meterlark.app` and `dist/Meterlark-1.2.2-arm64.zip`. Published archives, when
 available, are listed on the [Releases page](https://github.com/xingyu-shi/meterlark/releases).
 
 Builds are ad-hoc signed and are not notarized. On first launch, Control-click
@@ -215,8 +215,8 @@ This does not remove any Claude Code, Codex, or other agent session data. The bu
 ## Build and test
 
 ```sh
-swift test
-swift build -c release
+swift test --build-system native
+swift build -c release --build-system native
 ./scripts/package-app.sh
 ```
 

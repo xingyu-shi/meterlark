@@ -5,32 +5,16 @@ import XCTest
 
 @MainActor
 final class WindowSurfaceTests: XCTestCase {
-    func testSolidSurfacePaintsOpaquePixelsAndOptsOutOfVibrancy() throws {
-        let view = NativeSolidBackground.SolidView(frame: NSRect(x: 0, y: 0, width: 2, height: 2))
-        view.color = NSColor(srgbRed: 0.2, green: 0.4, blue: 0.6, alpha: 0.1)
-        view.appearance = NSAppearance(named: .aqua)
+    func testHostedBackgroundRemovesBlurAfterSwitchingFromGlassToSolid() {
+        _ = NSApplication.shared
+        let host = NSHostingView(rootView: AppSurfaceBackground(style: .glass))
+        host.frame = NSRect(x: 0, y: 0, width: 120, height: 80)
+        host.layoutSubtreeIfNeeded()
+        XCTAssertFalse(descendants(of: host, matching: NSVisualEffectView.self).isEmpty)
 
-        let color = try renderedColor(of: view)
-
-        XCTAssertTrue(view.isOpaque)
-        XCTAssertFalse(view.allowsVibrancy)
-        XCTAssertEqual(color.alphaComponent, 1, accuracy: 1.0 / 255)
-        XCTAssertEqual(color.redComponent, 0.2, accuracy: 1.0 / 255)
-        XCTAssertEqual(color.greenComponent, 0.4, accuracy: 1.0 / 255)
-        XCTAssertEqual(color.blueComponent, 0.6, accuracy: 1.0 / 255)
-    }
-
-    func testSolidSurfaceResolvesSystemColorsForLightAndDarkAppearance() throws {
-        let view = NativeSolidBackground.SolidView(frame: NSRect(x: 0, y: 0, width: 2, height: 2))
-        view.color = NSColor(AppWindowTheme.canvas)
-        view.appearance = NSAppearance(named: .aqua)
-        let light = try renderedColor(of: view)
-        view.appearance = NSAppearance(named: .darkAqua)
-        let dark = try renderedColor(of: view)
-
-        XCTAssertEqual(light.alphaComponent, 1, accuracy: 1.0 / 255)
-        XCTAssertEqual(dark.alphaComponent, 1, accuracy: 1.0 / 255)
-        XCTAssertGreaterThan(light.redComponent, dark.redComponent)
+        host.rootView = AppSurfaceBackground(style: .solid)
+        host.layoutSubtreeIfNeeded()
+        XCTAssertTrue(descendants(of: host, matching: NSVisualEffectView.self).isEmpty)
     }
 
     func testWindowSwitchesFromGlassBackToOpaqueSolid() {
@@ -59,24 +43,9 @@ final class WindowSurfaceTests: XCTestCase {
         XCTAssertEqual(window.backgroundColor.alphaComponent, 1)
     }
 
-    private func renderedColor(of view: NSView) throws -> NSColor {
-        let bitmap = try XCTUnwrap(NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: 2,
-            pixelsHigh: 2,
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
-        ))
-        let context = try XCTUnwrap(NSGraphicsContext(bitmapImageRep: bitmap))
-        NSGraphicsContext.saveGraphicsState()
-        defer { NSGraphicsContext.restoreGraphicsState() }
-        NSGraphicsContext.current = context
-        view.draw(view.bounds)
-        return try XCTUnwrap(bitmap.colorAt(x: 1, y: 1)?.usingColorSpace(.sRGB))
+    private func descendants<T: NSView>(of view: NSView, matching type: T.Type) -> [T] {
+        view.subviews.flatMap { child in
+            (child as? T).map { [$0] } ?? []
+        } + view.subviews.flatMap { descendants(of: $0, matching: type) }
     }
 }

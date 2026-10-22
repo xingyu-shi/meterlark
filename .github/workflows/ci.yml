@@ -30,4 +30,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run tests
-        run: swift test
+        run: swift test --build-system native
+      - name: Verify release package and linked SDK
+        run: ./scripts/package-app.sh

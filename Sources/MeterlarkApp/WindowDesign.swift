@@ -76,48 +76,10 @@ struct AppSurfaceLayer: View {
     var body: some View {
         switch style {
         case .solid:
-            NativeSolidBackground(color: NSColor(solidColor))
+            solidColor
         case .glass:
             NativeVisualEffectBackground(material: material, blendingMode: blendingMode)
                 .overlay(solidColor.opacity(tintOpacity))
-        }
-    }
-}
-
-struct NativeSolidBackground: NSViewRepresentable {
-    let color: NSColor
-
-    func makeNSView(context: Context) -> SolidView {
-        let view = SolidView()
-        view.color = color
-        return view
-    }
-
-    func updateNSView(_ nsView: SolidView, context: Context) {
-        nsView.color = color
-    }
-
-    final class SolidView: NSView {
-        var color: NSColor = .windowBackgroundColor {
-            didSet { needsDisplay = true }
-        }
-
-        // Menu-bar popovers live inside a system material container. A solid
-        // surface must draw opaque pixels without participating in vibrancy.
-        override var isOpaque: Bool { true }
-        override var allowsVibrancy: Bool { false }
-
-        override func draw(_ dirtyRect: NSRect) {
-            effectiveAppearance.performAsCurrentDrawingAppearance {
-                let resolved = color.usingColorSpace(.sRGB) ?? color
-                resolved.withAlphaComponent(1).setFill()
-                bounds.fill(using: .copy)
-            }
-        }
-
-        override func viewDidChangeEffectiveAppearance() {
-            super.viewDidChangeEffectiveAppearance()
-            needsDisplay = true
         }
     }
 }

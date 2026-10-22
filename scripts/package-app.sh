@@ -8,7 +8,12 @@ cd "$ROOT"
 # the release build usable when the managed user/module caches are read-only.
 export CLANG_MODULE_CACHE_PATH="${CLANG_MODULE_CACHE_PATH:-$ROOT/.build/clang-module-cache}"
 mkdir -p "$CLANG_MODULE_CACHE_PATH"
-swift build -c release --disable-sandbox
+# SwiftPM 6.4's default engine records the deployment target as the linked
+# SDK version, changing AppKit/SwiftUI behavior (swift-package-manager#10696).
+SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
+SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+BUILD_ARGS=(-c release --disable-sandbox --build-system native --sdk "$SDK_PATH")
+swift build "${BUILD_ARGS[@]}"
 
 APP="$ROOT/dist/Meterlark.app"
 VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$ROOT/Resources/Info.plist")"
@@ -17,12 +22,19 @@ ARCHIVE="$ROOT/dist/Meterlark-${VERSION}-arm64.zip"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
-BIN_DIR="$(swift build -c release --disable-sandbox --show-bin-path)"
+BIN_DIR="$(swift build "${BUILD_ARGS[@]}" --show-bin-path)"
 EXECUTABLE="$BIN_DIR/Meterlark"
 if [[ ! -x "$EXECUTABLE" ]]; then
 	print -u2 "Release executable not found"
 	exit 1
 fi
+
+LINKED_SDK_VERSION="$(xcrun vtool -show-build "$EXECUTABLE" | awk '$1 == "sdk" { print $2 }')"
+if [[ "$LINKED_SDK_VERSION" != "$SDK_VERSION" ]]; then
+    print -u2 "Linked SDK version mismatch: expected $SDK_VERSION, found $LINKED_SDK_VERSION"
+    exit 1
+fi
+print "Verified linked macOS SDK: $LINKED_SDK_VERSION"
 
 cp "$EXECUTABLE" "$APP/Contents/MacOS/Meterlark"
 # Remove debug symbol paths from the distributed copy before signing it.
