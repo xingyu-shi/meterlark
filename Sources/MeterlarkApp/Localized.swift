@@ -523,8 +523,8 @@ struct L10n: Sendable {
     var dashboardLayoutPreviewTitle: String { text("Dashboard Preview", "Dashboard 预览") }
     var dashboardLayoutSubtitle: String {
         text(
-            "Preview changes are live. Save to apply the draft to the main Dashboard; closing discards unsaved changes.",
-            "预览会实时更新。点击保存才会应用到主 Dashboard；关闭窗口会丢弃未保存的修改。"
+            "Drag components in the preview to reorder them, or use × to remove them. Re-enable components here. Save to apply; closing discards unsaved changes.",
+            "可在预览中拖拽排序、点击 × 移除，并在此重新启用组件。点击保存才会应用；关闭窗口会丢弃未保存的修改。"
         )
     }
     var dashboardLayoutBuiltIn: String { text("Built-in component", "内置组件") }
@@ -539,6 +539,8 @@ struct L10n: Sendable {
     var saveDashboardLayout: String { text("Save Dashboard layout", "保存 Dashboard 布局") }
     var layoutMoveUp: String { text("Move up", "上移") }
     var layoutMoveDown: String { text("Move down", "下移") }
+    var layoutDragToMove: String { text("Drag to reorder components", "拖拽调整组件顺序") }
+    var layoutRemoveComponent: String { text("Remove from dashboard; re-enable in the component list", "从面板移除；可在组件列表中重新启用") }
     var layoutSaved: String { text("Layout saved", "布局已保存") }
     var pluginSettingsSubtitle: String {
         text(

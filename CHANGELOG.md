@@ -4,6 +4,7 @@
 
 ### Added
 
+- Edit Dashboard components directly in the preview with drag-to-reorder, move, and remove controls. Preview and settings share one draft; save applies it to the main Dashboard.
 - Install HTTP plugins by pasting their complete JSON manifest in Settings → Plugins, with an editable preview and clipboard paste button.
 
 ### Changed

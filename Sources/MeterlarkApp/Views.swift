@@ -9,26 +9,19 @@ private extension View {
     }
 }
 
-final class DashboardLayoutPreviewState: ObservableObject {
-    @Published var layout: DashboardLayout
-    @Published var popoverHeight: Double
-
-    init(layout: DashboardLayout, popoverHeight: Double) {
-        self.layout = layout
-        self.popoverHeight = popoverHeight
-    }
-}
-
 struct DashboardPreviewView: View {
     @ObservedObject var store: MonitorStore
-    @ObservedObject var previewState: DashboardLayoutPreviewState
+    @ObservedObject var draft: DashboardLayoutDraft
+    let onHeightChange: (Double) -> Void
 
     var body: some View {
         MonitorPopover(
             store: store,
-            layoutOverride: previewState.layout,
-            popoverHeightOverride: previewState.popoverHeight,
-            showsSettingsMenu: false
+            layoutOverride: draft.layout,
+            popoverHeightOverride: draft.popoverHeight,
+            showsSettingsMenu: false,
+            editingDraft: draft,
+            onHeightChange: onHeightChange
         )
     }
 }
@@ -38,6 +31,8 @@ struct MonitorPopover: View {
     let layoutOverride: DashboardLayout?
     let popoverHeightOverride: Double?
     let showsSettingsMenu: Bool
+    let editingDraft: DashboardLayoutDraft?
+    let onHeightChange: ((Double) -> Void)?
     @State private var chartMetric: ChartMetric = .tokens
     @State private var chartGrouping: ChartGrouping = .model
     @State private var showAllModels = false
@@ -50,12 +45,16 @@ struct MonitorPopover: View {
         store: MonitorStore,
         layoutOverride: DashboardLayout? = nil,
         popoverHeightOverride: Double? = nil,
-        showsSettingsMenu: Bool = true
+        showsSettingsMenu: Bool = true,
+        editingDraft: DashboardLayoutDraft? = nil,
+        onHeightChange: ((Double) -> Void)? = nil
     ) {
         self.store = store
         self.layoutOverride = layoutOverride
         self.popoverHeightOverride = popoverHeightOverride
         self.showsSettingsMenu = showsSettingsMenu
+        self.editingDraft = editingDraft
+        self.onHeightChange = onHeightChange
     }
 
     private var copy: L10n { L10n(language: store.settings.language) }
@@ -73,7 +72,13 @@ struct MonitorPopover: View {
             VStack(alignment: .leading, spacing: CGFloat(store.settings.interfaceTextSize.sectionSpacing)) {
                 header
                 ForEach(store.visibleDashboardComponents(for: layoutOverride)) { component in
-                    dashboardComponentView(component)
+                    if let editingDraft {
+                        EditableDashboardComponent(component: component, draft: editingDraft, copy: copy) {
+                            dashboardComponentView(component)
+                        }
+                    } else {
+                        dashboardComponentView(component)
+                    }
                 }
                 footer
             }
@@ -110,6 +115,7 @@ struct MonitorPopover: View {
                 measuredContentHeight = Double(height)
             }
         }
+        .onChange(of: resolvedPopoverHeight) { height in onHeightChange?(height) }
     }
 
     private var resolvedPopoverHeight: Double {

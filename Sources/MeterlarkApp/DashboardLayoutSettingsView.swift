@@ -11,15 +11,12 @@ struct DashboardLayoutSettingsView: View {
     let appearance: AppAppearance
     let surfaceStyle: AppSurfaceStyle
     let interfaceTextSize: InterfaceTextSize
-    let popoverHeight: Double
     let initialCustomPopoverHeight: Double
     let onSave: (DashboardLayout, Double) throws -> Void
     let onReset: () throws -> Void
-    let onDraftChange: (DashboardLayout, Double) -> Void
     let onClose: () -> Void
 
-    @State private var draft: DashboardLayout
-    @State private var draftPopoverHeight: Double
+    @ObservedObject var draft: DashboardLayoutDraft
     @State private var customPopoverHeightText: String
     @State private var errorMessage: String?
     @State private var savedMessage: String?
@@ -28,16 +25,14 @@ struct DashboardLayoutSettingsView: View {
 
     init(
         components: [DashboardLayoutComponent],
-        layout: DashboardLayout,
+        draft: DashboardLayoutDraft,
         language: AppLanguage,
         appearance: AppAppearance = .automatic,
         surfaceStyle: AppSurfaceStyle = .solid,
         interfaceTextSize: InterfaceTextSize = .standard,
-        popoverHeight: Double = MonitorSettings.compactPopoverHeight,
         initialCustomPopoverHeight: Double? = nil,
         onSave: @escaping (DashboardLayout, Double) throws -> Void,
         onReset: @escaping () throws -> Void,
-        onDraftChange: @escaping (DashboardLayout, Double) -> Void = { _, _ in },
         onClose: @escaping () -> Void
     ) {
         self.components = components
@@ -45,17 +40,14 @@ struct DashboardLayoutSettingsView: View {
         self.appearance = appearance
         self.surfaceStyle = surfaceStyle
         self.interfaceTextSize = interfaceTextSize
-        self.popoverHeight = popoverHeight
         let resolvedCustomHeight = Self.resolvedCustomPopoverHeight(
-            initialCustomPopoverHeight ?? popoverHeight
+            initialCustomPopoverHeight ?? draft.popoverHeight
         )
         self.initialCustomPopoverHeight = resolvedCustomHeight
         self.onSave = onSave
         self.onReset = onReset
-        self.onDraftChange = onDraftChange
         self.onClose = onClose
-        _draft = State(initialValue: layout.normalized(for: components))
-        _draftPopoverHeight = State(initialValue: popoverHeight)
+        self.draft = draft
         _customPopoverHeightText = State(initialValue: Self.heightText(resolvedCustomHeight))
     }
 
@@ -66,7 +58,7 @@ struct DashboardLayoutSettingsView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    ForEach(draft.componentOrder, id: \.self) { componentID in
+                    ForEach(draft.layout.componentOrder, id: \.self) { componentID in
                         if let component = components.first(where: { $0.id == componentID }) {
                             componentEditor(component)
                         }
@@ -105,6 +97,8 @@ struct DashboardLayoutSettingsView: View {
         .preferredColorScheme(preferredColorScheme)
         .appInterfaceTextSize(interfaceTextSize)
         .environment(\.appSurfaceStyle, surfaceStyle)
+        .onReceive(draft.$layout.removeDuplicates().dropFirst()) { _ in clearMessages() }
+        .onReceive(draft.$popoverHeight.removeDuplicates().dropFirst()) { _ in clearMessages() }
     }
 
     private var header: some View {
@@ -180,12 +174,12 @@ struct DashboardLayoutSettingsView: View {
     }
 
     private func componentEditor(_ component: DashboardLayoutComponent) -> some View {
-        let isVisible = draft.isVisible(component.id)
+        let isVisible = draft.layout.isVisible(component.id)
         return VStack(alignment: .leading, spacing: 9) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Toggle(
                     isOn: Binding(
-                        get: { draft.isVisible(component.id) },
+                        get: { draft.layout.isVisible(component.id) },
                         set: { setVisible($0, componentID: component.id) }
                     )
                 ) {
@@ -200,8 +194,8 @@ struct DashboardLayoutSettingsView: View {
                 }
                 Spacer()
                 orderButtons(
-                    index: draft.componentOrder.firstIndex(of: component.id) ?? 0,
-                    count: draft.componentOrder.count,
+                    index: draft.layout.componentOrder.firstIndex(of: component.id) ?? 0,
+                    count: draft.layout.componentOrder.count,
                     moveUp: { move(component.id, offset: -1) },
                     moveDown: { move(component.id, offset: 1) }
                 )
@@ -212,7 +206,7 @@ struct DashboardLayoutSettingsView: View {
                     copy.dashboardLayoutColumns,
                     selection: Binding(
                         get: {
-                            draft.componentColumns[component.id]
+                            draft.layout.componentColumns[component.id]
                                 ?? component.defaultColumns
                                 ?? range.lowerBound
                         },
@@ -276,13 +270,7 @@ struct DashboardLayoutSettingsView: View {
     }
 
     private func setVisible(_ visible: Bool, componentID: String) {
-        if visible {
-            draft.hiddenComponentIDs.removeAll { $0 == componentID }
-        } else if !draft.hiddenComponentIDs.contains(componentID) {
-            draft.hiddenComponentIDs.append(componentID)
-        }
-        clearMessages()
-        publishDraft()
+        draft.setVisible(visible, componentID: componentID)
     }
 
     private func setColumns(
@@ -291,26 +279,21 @@ struct DashboardLayoutSettingsView: View {
         range: ClosedRange<Int>
     ) {
         guard range.contains(columns) else { return }
-        draft.componentColumns[component.id] = columns
-        clearMessages()
-        publishDraft()
+        draft.layout.componentColumns[component.id] = columns
     }
 
     private func move(_ componentID: String, offset: Int) {
-        guard let index = draft.componentOrder.firstIndex(of: componentID) else { return }
+        guard let index = draft.layout.componentOrder.firstIndex(of: componentID) else { return }
         let destination = index + offset
-        guard draft.componentOrder.indices.contains(destination) else { return }
-        draft.componentOrder.swapAt(index, destination)
-        clearMessages()
-        publishDraft()
+        guard draft.layout.componentOrder.indices.contains(destination) else { return }
+        draft.move(componentID, to: draft.layout.componentOrder[destination])
     }
 
     private func save() {
-        let normalized = draft.normalized(for: components)
+        let normalized = draft.layout.normalized(for: components)
         do {
-            try onSave(normalized, draftPopoverHeight)
-            draft = normalized
-            onDraftChange(normalized, draftPopoverHeight)
+            try onSave(normalized, draft.popoverHeight)
+            draft.layout = normalized
             errorMessage = nil
             savedMessage = copy.layoutSaved
         } catch {
@@ -322,10 +305,7 @@ struct DashboardLayoutSettingsView: View {
     private func reset() {
         do {
             try onReset()
-            draft = DashboardLayout.default.normalized(for: components)
-            draftPopoverHeight = popoverHeight
-            customPopoverHeightText = Self.heightText(Self.resolvedCustomPopoverHeight(popoverHeight))
-            onDraftChange(draft, draftPopoverHeight)
+            customPopoverHeightText = Self.heightText(Self.resolvedCustomPopoverHeight(draft.popoverHeight))
             errorMessage = nil
             savedMessage = copy.layoutSaved
         } catch {
@@ -339,17 +319,13 @@ struct DashboardLayoutSettingsView: View {
         savedMessage = nil
     }
 
-    private func publishDraft() {
-        onDraftChange(draft.normalized(for: components), draftPopoverHeight)
-    }
-
     private var heightMode: DashboardHeightMode {
-        draftPopoverHeight == MonitorSettings.compactPopoverHeight ? .fitContent : .fixed
+        draft.popoverHeight == MonitorSettings.compactPopoverHeight ? .fitContent : .fixed
     }
 
     private var fixedPopoverHeight: Double {
         heightMode == .fixed
-            ? draftPopoverHeight
+            ? draft.popoverHeight
             : initialCustomPopoverHeight
     }
 
@@ -364,12 +340,10 @@ struct DashboardLayoutSettingsView: View {
 
     private func setPopoverHeight(_ height: Double) {
         guard MonitorSettings.isValidPopoverHeight(height) else { return }
-        draftPopoverHeight = height
+        draft.popoverHeight = height
         if height != MonitorSettings.compactPopoverHeight {
             customPopoverHeightText = Self.heightText(height)
         }
-        clearMessages()
-        publishDraft()
     }
 
     private func commitCustomPopoverHeightIfValid() {

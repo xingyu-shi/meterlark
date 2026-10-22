@@ -427,10 +427,8 @@ final class MonitorStore: ObservableObject {
     /// Dashboard layout. Keep it while the editor is open so plugin runtime
     /// updates can refresh the component catalog without discarding the
     /// user's in-progress choices.
-    private var dashboardLayoutEditingDraft: DashboardLayout?
-    private var dashboardLayoutEditingPopoverHeight: Double?
+    private var dashboardLayoutDraft: DashboardLayoutDraft?
     private var dashboardPreviewWindow: NSWindow?
-    private var dashboardPreviewState: DashboardLayoutPreviewState?
     private var lastPluginRefreshStartedAt: Date?
 
     init(
@@ -1032,39 +1030,36 @@ final class MonitorStore: ObservableObject {
         }
         try dashboardLayoutStore.save(normalized)
         dashboardLayout = normalized
-        dashboardLayoutEditingDraft = normalized
-        dashboardLayoutEditingPopoverHeight = selectedPopoverHeight
+        dashboardLayoutDraft?.layout = normalized
+        dashboardLayoutDraft?.popoverHeight = selectedPopoverHeight
         settings.popoverHeight = selectedPopoverHeight
         refreshDashboardLayoutSettingsWindow()
-        updateDashboardPreviewLayout(normalized, popoverHeight: selectedPopoverHeight)
+        refreshDashboardPreviewWindow()
     }
 
     func resetDashboardLayout() throws {
         try dashboardLayoutStore.remove()
         dashboardLayout = .default
-        dashboardLayoutEditingDraft = dashboardLayout.normalized(for: availableDashboardComponents)
-        dashboardLayoutEditingPopoverHeight = settings.popoverHeight
+        dashboardLayoutDraft?.layout = dashboardLayout.normalized(for: availableDashboardComponents)
+        dashboardLayoutDraft?.popoverHeight = settings.popoverHeight
         refreshDashboardLayoutSettingsWindow()
-        updateDashboardPreviewLayout(
-            dashboardLayout,
-            popoverHeight: settings.popoverHeight
-        )
+        refreshDashboardPreviewWindow()
     }
 
     func showDashboardLayoutSettings() {
         let copy = L10n(language: settings.language)
         let shouldArrangeWindows = dashboardLayoutSettingsWindow == nil || dashboardPreviewWindow == nil
-        let previewWindow = showDashboardPreviewWindow(copy: copy)
         let components = availableDashboardComponents
-        let editingLayout = (dashboardLayoutEditingDraft ?? dashboardLayout)
-            .normalized(for: components)
-        let editingPopoverHeight = dashboardLayoutEditingPopoverHeight ?? settings.popoverHeight
-        dashboardLayoutEditingDraft = editingLayout
-        dashboardLayoutEditingPopoverHeight = editingPopoverHeight
+        let draft = dashboardLayoutDraft ?? DashboardLayoutDraft(
+            layout: dashboardLayout.normalized(for: components),
+            popoverHeight: settings.popoverHeight
+        )
+        draft.layout = draft.layout.normalized(for: components)
+        dashboardLayoutDraft = draft
+        let previewWindow = showDashboardPreviewWindow(copy: copy, draft: draft)
         let rootView = makeDashboardLayoutSettingsView(
             components: components,
-            layout: editingLayout,
-            popoverHeight: editingPopoverHeight
+            draft: draft
         )
 
         let window: NSWindow
@@ -1101,13 +1096,7 @@ final class MonitorStore: ObservableObject {
         window.makeKeyAndOrderFront(nil)
     }
 
-    private func showDashboardPreviewWindow(copy: L10n) -> NSWindow {
-        let previewState = dashboardPreviewState ?? DashboardLayoutPreviewState(
-            layout: dashboardLayout.normalized(for: availableDashboardComponents),
-            popoverHeight: dashboardLayoutEditingPopoverHeight ?? settings.popoverHeight
-        )
-        dashboardPreviewState = previewState
-
+    private func showDashboardPreviewWindow(copy: L10n, draft: DashboardLayoutDraft) -> NSWindow {
         let window: NSWindow
         if let existing = dashboardPreviewWindow {
             window = existing
@@ -1120,55 +1109,31 @@ final class MonitorStore: ObservableObject {
             )
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(
-                rootView: DashboardPreviewView(store: self, previewState: previewState)
+                rootView: DashboardPreviewView(store: self, draft: draft, onHeightChange: updateDashboardPreviewHeight)
             )
             dashboardPreviewWindow = window
         }
 
         if let hostingView = window.contentView as? NSHostingView<DashboardPreviewView> {
-            hostingView.rootView = DashboardPreviewView(store: self, previewState: previewState)
+            hostingView.rootView = DashboardPreviewView(store: self, draft: draft, onHeightChange: updateDashboardPreviewHeight)
         }
         window.title = copy.dashboardLayoutPreviewTitle
         window.setContentSize(NSSize(
             width: CGFloat(settings.interfaceTextSize.popoverWidth),
             height: CGFloat(effectivePopoverHeight(
-                for: previewState.layout,
-                storedHeight: previewState.popoverHeight
+                for: draft.layout,
+                storedHeight: draft.popoverHeight
             ))
         ))
         return window
     }
 
     private func closeDashboardLayoutSession() {
-        dashboardLayoutEditingDraft = nil
-        dashboardLayoutEditingPopoverHeight = nil
-        dashboardPreviewState?.layout = dashboardLayout.normalized(for: availableDashboardComponents)
-        dashboardPreviewState?.popoverHeight = settings.popoverHeight
+        dashboardLayoutDraft?.layout = dashboardLayout.normalized(for: availableDashboardComponents)
+        dashboardLayoutDraft?.popoverHeight = settings.popoverHeight
+        dashboardLayoutDraft = nil
         dashboardLayoutSettingsWindow?.orderOut(nil)
         dashboardPreviewWindow?.orderOut(nil)
-    }
-
-    private func updateDashboardLayoutDraft(
-        _ layout: DashboardLayout,
-        popoverHeight: Double
-    ) {
-        let normalized = layout.normalized(for: availableDashboardComponents)
-        guard MonitorSettings.isValidPopoverHeight(popoverHeight) else { return }
-        dashboardLayoutEditingDraft = normalized
-        dashboardLayoutEditingPopoverHeight = popoverHeight
-        updateDashboardPreviewLayout(normalized, popoverHeight: popoverHeight)
-    }
-
-    private func updateDashboardPreviewLayout(
-        _ layout: DashboardLayout,
-        popoverHeight: Double? = nil
-    ) {
-        guard let previewState = dashboardPreviewState else { return }
-        previewState.layout = layout.normalized(for: availableDashboardComponents)
-        if let popoverHeight {
-            previewState.popoverHeight = popoverHeight
-        }
-        refreshDashboardPreviewWindow()
     }
 
     private func arrangeDashboardLayoutWindows(settingsWindow: NSWindow, previewWindow: NSWindow) {
@@ -4022,33 +3987,33 @@ final class MonitorStore: ObservableObject {
     }
 
     private func refreshDashboardPreviewWindow() {
-        guard let window = dashboardPreviewWindow else { return }
+        guard let window = dashboardPreviewWindow, dashboardLayoutDraft != nil else { return }
         window.title = L10n(language: settings.language).dashboardLayoutPreviewTitle
-        let previewHeight = dashboardPreviewState?.popoverHeight ?? settings.popoverHeight
         window.setContentSize(NSSize(
             width: CGFloat(settings.interfaceTextSize.popoverWidth),
-            height: CGFloat(effectivePopoverHeight(
-                for: dashboardPreviewState?.layout,
-                storedHeight: previewHeight
-            ))
+            height: window.contentLayoutRect.height
         ))
     }
 
+    private func updateDashboardPreviewHeight(_ height: Double) {
+        guard let window = dashboardPreviewWindow, dashboardLayoutDraft != nil,
+              height.isFinite, height > 0,
+              abs(window.contentLayoutRect.height - height) > 0.5 else { return }
+        let top = window.frame.maxY
+        window.setContentSize(NSSize(width: CGFloat(settings.interfaceTextSize.popoverWidth), height: height))
+        window.setFrameOrigin(NSPoint(x: window.frame.minX, y: top - window.frame.height))
+    }
+
     private func refreshDashboardLayoutSettingsWindow() {
-        guard let window = dashboardLayoutSettingsWindow else { return }
+        guard let window = dashboardLayoutSettingsWindow, let draft = dashboardLayoutDraft else { return }
         let copy = L10n(language: settings.language)
         window.title = copy.dashboardLayoutSettingsTitle
         if let hostingView = window.contentView as? NSHostingView<DashboardLayoutSettingsView> {
             let components = availableDashboardComponents
-            let editingLayout = (dashboardLayoutEditingDraft ?? dashboardLayout)
-                .normalized(for: components)
-            let editingPopoverHeight = dashboardLayoutEditingPopoverHeight ?? settings.popoverHeight
-            dashboardLayoutEditingDraft = editingLayout
-            dashboardLayoutEditingPopoverHeight = editingPopoverHeight
+            draft.layout = draft.layout.normalized(for: components)
             hostingView.rootView = makeDashboardLayoutSettingsView(
                 components: components,
-                layout: editingLayout,
-                popoverHeight: editingPopoverHeight
+                draft: draft
             )
         }
     }
@@ -4065,29 +4030,24 @@ final class MonitorStore: ObservableObject {
 
     private func makeDashboardLayoutSettingsView(
         components: [DashboardLayoutComponent],
-        layout: DashboardLayout,
-        popoverHeight: Double
+        draft: DashboardLayoutDraft
     ) -> DashboardLayoutSettingsView {
         DashboardLayoutSettingsView(
             components: components,
-            layout: layout,
+            draft: draft,
             language: settings.language,
             appearance: settings.appearance,
             surfaceStyle: settings.surfaceStyle,
             interfaceTextSize: settings.interfaceTextSize,
-            popoverHeight: popoverHeight,
             initialCustomPopoverHeight: effectivePopoverHeight(
-                for: layout,
-                storedHeight: popoverHeight
+                for: draft.layout,
+                storedHeight: draft.popoverHeight
             ),
             onSave: { [weak self] layout, popoverHeight in
                 try self?.saveDashboardLayout(layout, popoverHeight: popoverHeight)
             },
             onReset: { [weak self] in
                 try self?.resetDashboardLayout()
-            },
-            onDraftChange: { [weak self] layout, popoverHeight in
-                self?.updateDashboardLayoutDraft(layout, popoverHeight: popoverHeight)
             },
             onClose: { [weak self] in self?.closeDashboardLayoutSession() }
         )
