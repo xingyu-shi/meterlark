@@ -724,19 +724,24 @@ struct L10n: Sendable {
     var generalSettings: String { text("General", "常规") }
     var launchAtLogin: String { text("Launch at login", "开机自动启动") }
     var launchAtLoginNeedsApproval: String { text("approval required", "需要批准") }
-    var launchAtLoginUnavailable: String { text("unavailable", "不可用") }
-    var launchAtLoginApprovalTitle: String { text("Approval required", "需要批准开机启动") }
+    var launchAtLoginManualSetupMessage: String {
+        text(
+            "Drag this Meterlark icon into Open at Login in System Settings. This guide closes when setup is complete.",
+            "将上方 Meterlark 图标拖入系统设置的“登录时打开”列表。添加成功后，此引导会自动关闭。"
+        )
+    }
+    var launchAtLoginDragIcon: String { text("Drag into Open at Login", "拖入“登录时打开”") }
     var launchAtLoginApprovalMessage: String {
         text(
-            "macOS registered Meterlark, but it needs your approval in System Settings → General → Login Items.",
-            "macOS 已登记 Meterlark，但需要你在“系统设置 → 通用 → 登录项”中批准。"
+            "Meterlark is already registered. Turn on its switch in Login Items to allow it to run at login.",
+            "Meterlark 已登记。请在“登录项”中打开它的开关，允许登录时运行。"
         )
     }
     var openLoginItems: String { text("Open Login Items", "打开登录项") }
-    func launchAtLoginError(_ reason: String) -> String {
+    var launchAtLoginManualDisableMessage: String {
         text(
-            "macOS could not update the login item. You may need to allow Meterlark in System Settings → General → Login Items.\n\(reason)",
-            "macOS 无法更新开机启动项。可能需要在“系统设置 → 通用 → 登录项”中允许 Meterlark。\n\(reason)"
+            "Open Login Items, select Meterlark under Open at Login, then click the − button to remove it.",
+            "打开“登录项”设置，在“登录时打开”中选中 Meterlark，然后点击 − 移除。"
         )
     }
     var refreshSettings: String { text("Refresh", "刷新") }

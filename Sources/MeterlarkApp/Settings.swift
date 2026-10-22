@@ -350,7 +350,6 @@ struct MonitorSettings: Equatable, Sendable {
     var automaticPricingRefresh: Bool
     var notificationFeedEnabled: Bool
     var developerMode: Bool
-    var launchAtLogin: Bool
     var language: AppLanguage
     var popoverHeight: Double
     var customPricingPath: String
@@ -371,7 +370,6 @@ struct MonitorSettings: Equatable, Sendable {
         automaticPricingRefresh: true,
         notificationFeedEnabled: true,
         developerMode: false,
-        launchAtLogin: false,
         language: .system,
         popoverHeight: compactPopoverHeight,
         customPricingPath: "",
@@ -411,7 +409,6 @@ final class SettingsStore {
             automaticPricingRefresh: defaults.object(forKey: prefix + "automaticPricingRefresh") as? Bool ?? true,
             notificationFeedEnabled: defaults.object(forKey: prefix + "notificationFeedEnabled") as? Bool ?? true,
             developerMode: defaults.object(forKey: prefix + "developerMode") as? Bool ?? MonitorSettings.default.developerMode,
-            launchAtLogin: defaults.object(forKey: prefix + "launchAtLogin") as? Bool ?? MonitorSettings.default.launchAtLogin,
             language: AppLanguage(rawValue: defaults.string(forKey: prefix + "language") ?? "") ?? .system,
             popoverHeight: MonitorSettings.validatedPopoverHeight(defaults.object(forKey: prefix + "popoverHeight") as? Double),
             customPricingPath: defaults.string(forKey: prefix + "customPricingPath") ?? "",
@@ -440,7 +437,6 @@ final class SettingsStore {
         defaults.set(settings.automaticPricingRefresh, forKey: prefix + "automaticPricingRefresh")
         defaults.set(settings.notificationFeedEnabled, forKey: prefix + "notificationFeedEnabled")
         defaults.set(settings.developerMode, forKey: prefix + "developerMode")
-        defaults.set(settings.launchAtLogin, forKey: prefix + "launchAtLogin")
         defaults.set(settings.language.rawValue, forKey: prefix + "language")
         defaults.set(settings.popoverHeight, forKey: prefix + "popoverHeight")
         defaults.set(settings.customPricingPath, forKey: prefix + "customPricingPath")

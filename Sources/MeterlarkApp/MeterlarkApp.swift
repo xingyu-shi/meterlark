@@ -20,6 +20,10 @@ struct MeterlarkApp: App {
     var body: some Scene {
         MenuBarExtra {
             MonitorPopover(store: store)
+                .onAppear(perform: store.refreshLaunchAtLoginStatus)
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    store.refreshLaunchAtLoginStatus()
+                }
         } label: {
             MenuBarFormatView(
                 format: store.menuBarFormat,

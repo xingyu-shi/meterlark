@@ -262,10 +262,15 @@ struct MonitorPopover: View {
         Menu {
             Section(copy.generalSettings) {
                 Toggle(isOn: Binding(
-                    get: { store.settings.launchAtLogin },
+                    get: { store.launchAtLoginEnabled },
                     set: { store.setLaunchAtLogin($0) }
                 )) {
                     Label(launchAtLoginLabel, systemImage: "power")
+                }
+                Button {
+                    store.openLaunchAtLoginSettings()
+                } label: {
+                    Label(copy.openLoginItems, systemImage: "arrow.up.forward.app")
                 }
             }
 
@@ -541,9 +546,7 @@ struct MonitorPopover: View {
         switch store.launchAtLoginStatus {
         case .requiresApproval:
             return "\(copy.launchAtLogin) · \(copy.launchAtLoginNeedsApproval)"
-        case .notFound:
-            return "\(copy.launchAtLogin) · \(copy.launchAtLoginUnavailable)"
-        case .notRegistered, .enabled:
+        case .notRegistered, .notFound, .enabled:
             return copy.launchAtLogin
         }
     }

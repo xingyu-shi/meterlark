@@ -411,6 +411,7 @@ final class MonitorStore: ObservableObject {
     private let logger = Logger(subsystem: "com.xingyu.meterlark", category: "refresh")
     private var testingNow: Date?
     private var aboutWindow: NSWindow?
+    private let loginItemSetup = LoginItemSetupController()
     private var modelCatalogWindow: NSWindow?
     private let modelCatalogViewState = ModelCatalogViewState()
     private var budgetSettingsWindow: NSWindow?
@@ -530,7 +531,6 @@ final class MonitorStore: ObservableObject {
             directory: self.generatedPricingDirectory
         )
         logger.info("MonitorStore initialized; hasSnapshot=\(self.snapshot.hasData, privacy: .public)")
-        reconcileLaunchAtLogin()
         startMonitoring()
         refreshPluginsIfDue(force: true)
         refreshModelCatalogIfDue()
@@ -1971,25 +1971,52 @@ final class MonitorStore: ObservableObject {
     }
 
     func setLaunchAtLogin(_ enabled: Bool) {
-        guard settings.launchAtLogin != enabled else { return }
-
         do {
             let status = try LaunchAtLoginService.setEnabled(enabled)
             launchAtLoginStatus = status
-            settings.launchAtLogin = enabled
             if enabled, status == .requiresApproval {
-                showLaunchAtLoginApprovalAlert()
+                openLaunchAtLoginSettings()
+            } else {
+                loginItemSetup.close()
             }
         } catch {
             launchAtLoginStatus = LaunchAtLoginService.currentStatus()
+            if enabled == launchAtLoginStatus.isRegistered {
+                if enabled, launchAtLoginStatus == .requiresApproval {
+                    openLaunchAtLoginSettings()
+                }
+                return
+            }
             logger.error("Could not update launch-at-login setting; enabled=\(enabled, privacy: .public), error=\(error.localizedDescription, privacy: .public)")
+            if enabled {
+                openLaunchAtLoginSettings()
+                return
+            }
             let copy = L10n(language: settings.language)
             let alert = NSAlert()
             alert.alertStyle = .warning
             alert.messageText = copy.launchAtLogin
-            alert.informativeText = copy.launchAtLoginError(error.localizedDescription)
-            alert.addButton(withTitle: copy.ok)
-            alert.runModal()
+            alert.informativeText = copy.launchAtLoginManualDisableMessage
+            alert.addButton(withTitle: copy.openLoginItems)
+            alert.addButton(withTitle: copy.cancel)
+            if alert.runModal() == .alertFirstButtonReturn {
+                LaunchAtLoginService.openSettings()
+            }
+        }
+    }
+
+    var launchAtLoginEnabled: Bool { launchAtLoginStatus.isEnabled }
+
+    func refreshLaunchAtLoginStatus() {
+        launchAtLoginStatus = LaunchAtLoginService.currentStatus()
+        if launchAtLoginStatus.isEnabled {
+            loginItemSetup.close()
+        }
+    }
+
+    func openLaunchAtLoginSettings() {
+        loginItemSetup.show(language: settings.language) { [weak self] status in
+            self?.launchAtLoginStatus = status
         }
     }
 
@@ -2667,30 +2694,6 @@ final class MonitorStore: ObservableObject {
         publishDeveloperDiagnostics()
         if drainPendingRefresh() { return }
         periodicCheck()
-    }
-
-    private func reconcileLaunchAtLogin() {
-        let enabled = settings.launchAtLogin
-        do {
-            launchAtLoginStatus = try LaunchAtLoginService.setEnabled(enabled)
-        } catch {
-            launchAtLoginStatus = LaunchAtLoginService.currentStatus()
-            logger.error("Could not reconcile launch-at-login setting; enabled=\(enabled, privacy: .public), error=\(error.localizedDescription, privacy: .public)")
-        }
-    }
-
-    private func showLaunchAtLoginApprovalAlert() {
-        let copy = L10n(language: settings.language)
-        let alert = NSAlert()
-        alert.messageText = copy.launchAtLoginApprovalTitle
-        alert.informativeText = copy.launchAtLoginApprovalMessage
-        alert.addButton(withTitle: copy.openLoginItems)
-        alert.addButton(withTitle: copy.cancel)
-        guard alert.runModal() == .alertFirstButtonReturn,
-              let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") else {
-            return
-        }
-        NSWorkspace.shared.open(url)
     }
 
     private func installWatcher(for roots: [URL]) {

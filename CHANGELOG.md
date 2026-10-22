@@ -8,6 +8,7 @@
 
 ### Changed
 
+- Register launch at login on the first request and reflect the system's current setting. When setup needs user action, automatically open Login Items with a floating guide containing a draggable app icon or approval instructions.
 - Fit the default dashboard height to its rendered content and limit it to the current screen's available height.
 - Fix valid menu-bar formats being rejected as control characters in optimized builds, and run CI tests in Release mode.
 - Show pricing status as a compact colored icon, keeping details in its popover and the last-refresh time on one line.

@@ -5,25 +5,27 @@ enum LaunchAtLoginStatus: Equatable, Sendable {
     case enabled
     case requiresApproval
     case notFound
+
+    var isRegistered: Bool { self == .enabled || self == .requiresApproval }
+    var isEnabled: Bool { self == .enabled }
 }
 
 enum LaunchAtLoginOperation: Equatable, Sendable {
     case none
     case register
     case unregister
-    case unavailable
 }
 
-enum LaunchAtLoginError: LocalizedError {
-    case serviceNotFound
+enum LaunchAtLoginError: LocalizedError, Equatable {
     case registrationDidNotStick
+    case unregistrationDidNotStick
 
     var errorDescription: String? {
         switch self {
-        case .serviceNotFound:
-            return "The app is not available as a macOS login item."
         case .registrationDidNotStick:
             return "macOS did not register the app as a login item."
+        case .unregistrationDidNotStick:
+            return "macOS did not remove the app as a login item."
         }
     }
 }
@@ -47,12 +49,10 @@ enum LaunchAtLoginService {
     static func operation(for enabled: Bool, status: LaunchAtLoginStatus) -> LaunchAtLoginOperation {
         if enabled {
             switch status {
-            case .notRegistered:
+            case .notRegistered, .notFound:
                 return .register
             case .enabled, .requiresApproval:
                 return .none
-            case .notFound:
-                return .unavailable
             }
         }
 
@@ -64,25 +64,33 @@ enum LaunchAtLoginService {
         }
     }
 
-    static func setEnabled(_ enabled: Bool) throws -> LaunchAtLoginStatus {
-        let service = SMAppService.mainApp
-        let status = currentStatus()
+    static func setEnabled(
+        _ enabled: Bool,
+        readStatus: () -> LaunchAtLoginStatus = { currentStatus() },
+        register: () throws -> Void = { try SMAppService.mainApp.register() },
+        unregister: () throws -> Void = { try SMAppService.mainApp.unregister() }
+    ) throws -> LaunchAtLoginStatus {
+        let status = readStatus()
 
         switch operation(for: enabled, status: status) {
         case .none:
             return status
         case .register:
-            try service.register()
+            try register()
         case .unregister:
-            try service.unregister()
-        case .unavailable:
-            throw LaunchAtLoginError.serviceNotFound
+            try unregister()
         }
 
-        let resultingStatus = currentStatus()
-        if enabled, resultingStatus == .notRegistered {
-            throw LaunchAtLoginError.registrationDidNotStick
+        let resultingStatus = readStatus()
+        if enabled != resultingStatus.isRegistered {
+            throw enabled
+                ? LaunchAtLoginError.registrationDidNotStick
+                : LaunchAtLoginError.unregistrationDidNotStick
         }
         return resultingStatus
+    }
+
+    static func openSettings() {
+        SMAppService.openSystemSettingsLoginItems()
     }
 }

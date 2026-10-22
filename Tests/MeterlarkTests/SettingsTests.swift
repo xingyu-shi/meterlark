@@ -287,21 +287,6 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(MonitorSettings.budgetAlertThresholdPercentage(0.995), "99.5")
     }
 
-    func testLaunchAtLoginDefaultsToOffAndPersists() {
-        let suiteName = "Meterlark.SettingsTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-
-        let store = SettingsStore(defaults: defaults)
-        var settings = store.load()
-        XCTAssertFalse(settings.launchAtLogin)
-
-        settings.launchAtLogin = true
-        store.save(settings)
-
-        XCTAssertTrue(store.load().launchAtLogin)
-    }
-
     func testDeveloperModeDefaultsToOffAndPersists() {
         let suiteName = "Meterlark.SettingsTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
