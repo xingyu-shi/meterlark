@@ -326,14 +326,6 @@ struct L10n: Sendable {
         case .mixed: return pricingStatusMixed
         }
     }
-    func pricingStatusBadgeTitle(_ kind: PricingStatusKind) -> String {
-        switch kind {
-        case .stale: return text("Update", "需更新")
-        case .approximate: return text("Review", "需确认")
-        case .unknown: return text("Unknown", "未知")
-        case .mixed: return text("Mixed", "混合")
-        }
-    }
     func pricingStatusDescription(_ kind: PricingStatusKind, includesMixedSources: Bool = false) -> String {
         switch kind {
         case .stale: return pricingStatusStaleDescription

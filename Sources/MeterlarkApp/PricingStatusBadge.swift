@@ -29,34 +29,18 @@ struct PricingStatusBadge: View {
             Button {
                 isPresented.toggle()
             } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: presentation.kind.iconName)
-                        .font(.system(size: 10, weight: .semibold))
-                    Text(copy.pricingStatusBadgeTitle(presentation.kind))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    if presentation.models.count > 0 {
-                        Text("·")
-                            .foregroundStyle(presentation.kind.tint.opacity(0.7))
-                        Text(String(presentation.models.count))
-                            .monospacedDigit()
-                    }
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 8, weight: .semibold))
-                }
-                .appFont(.metadataEmphasis)
-                .foregroundStyle(presentation.kind.tint)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(presentation.kind.tint.opacity(0.12))
-                .overlay(
-                    Capsule(style: .continuous)
-                        .stroke(presentation.kind.tint.opacity(0.42), lineWidth: 0.7)
-                )
-                .clipShape(Capsule(style: .continuous))
+                Image(systemName: presentation.kind.iconName)
+                    .appFont(.icon)
+                    .foregroundStyle(presentation.kind.tint)
+                    .frame(width: 22, height: 22)
+                    .background(presentation.kind.tint.opacity(0.12), in: Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(presentation.kind.tint.opacity(0.42), lineWidth: 0.7)
+                    )
             }
             .buttonStyle(.plain)
-            .help(isPresented ? copy.pricingStatusCollapseHint : copy.pricingStatusExpandHint)
+            .help(copy.pricingStatusTitle(presentation.kind))
             .accessibilityLabel(copy.pricingStatusTitle(presentation.kind))
             .accessibilityValue(copy.pricingStatusModelCount(presentation.models.count))
             .accessibilityHint(isPresented ? copy.pricingStatusCollapseHint : copy.pricingStatusExpandHint)

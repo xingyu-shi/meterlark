@@ -8,6 +8,7 @@
 
 ### Changed
 
+- Show pricing status as a compact colored icon, keeping details in its popover and the last-refresh time on one line.
 - Apply appearance settings to the plugin paste window.
 - Build release packages with the native SwiftPM engine and verify the linked SDK version, avoiding incorrect system UI behavior from SwiftPM 6.4's default engine.
 - Establish Meterlark as an independent macOS menu-bar application for AI coding usage, cost estimates, budgets, and extensible dashboards.

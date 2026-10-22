@@ -41,16 +41,6 @@ final class LocalizedTests: XCTestCase {
         XCTAssertEqual(chinese.budgetAlertLabel("65"), "达到 65% 告警")
     }
 
-    func testPricingStatusBadgeUsesCompactTitles() {
-        let english = L10n(language: .english)
-        let chinese = L10n(language: .chinese)
-
-        XCTAssertEqual(english.pricingStatusBadgeTitle(.stale), "Update")
-        XCTAssertEqual(chinese.pricingStatusBadgeTitle(.stale), "需更新")
-        XCTAssertEqual(english.pricingStatusBadgeTitle(.approximate), "Review")
-        XCTAssertEqual(chinese.pricingStatusBadgeTitle(.approximate), "需确认")
-    }
-
     func testPriceListSourceUsesProviderNamesAndSupportsMultipleProviders() {
         let english = L10n(language: .english)
         let chinese = L10n(language: .chinese)

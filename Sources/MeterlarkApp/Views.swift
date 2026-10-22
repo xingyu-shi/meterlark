@@ -153,6 +153,8 @@ struct MonitorPopover: View {
                 }
                 .appFont(.caption)
                 .foregroundStyle(Color.muted)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             }
             if case let .failed(message) = store.phase {
                 Text(message)
