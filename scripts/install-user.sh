@@ -10,6 +10,8 @@ DEST="$HOME/Applications/Meterlark.app"
 "$ROOT/scripts/package-app.sh"
 
 mkdir -p "$HOME/Applications"
+# Replace the generated bundle so removed resources cannot survive an upgrade.
+rm -rf "$DEST"
 ditto "$APP" "$DEST"
 open "$DEST"
 print "Installed: $DEST"
