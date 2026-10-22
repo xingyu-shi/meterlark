@@ -3,6 +3,129 @@ import XCTest
 @testable import MeterlarkApp
 
 final class ExternalPluginRegistryTests: XCTestCase {
+    func testPastedHTTPManifestsInstallWithoutExecutablesAndStartDisabled() throws {
+        let root = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let registry = makeRegistry(
+            root: root.appendingPathComponent("Plugins", isDirectory: true),
+            activationURL: root.appendingPathComponent("activations.json")
+        )
+
+        for example in ["Gateway", "ModelCatalog"] {
+            let json = try String(contentsOf: repoRoot().appendingPathComponent("Examples/Plugins/\(example)/plugin.json"))
+            let installed = try registry.install(manifestJSON: json)
+            XCTAssertEqual(installed.manifest.transport, .httpJSON)
+            XCTAssertEqual(
+                try String(contentsOf: installed.packageURL.appendingPathComponent("plugin.json")),
+                json
+            )
+            XCTAssertEqual(
+                try FileManager.default.contentsOfDirectory(atPath: installed.packageURL.path),
+                ["plugin.json"]
+            )
+        }
+
+        let records = registry.discover()
+        XCTAssertEqual(records.count, 2)
+        XCTAssertTrue(records.allSatisfy { $0.isPackageValid && !$0.enabled })
+        XCTAssertTrue(registry.enabledProviders().isEmpty)
+        XCTAssertTrue(registry.enabledModelCatalogProviders().isEmpty)
+    }
+
+    func testPastedManifestRejectsMalformedJSONAndInvalidIdentityWithoutCreatingInstallRoot() throws {
+        let root = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let registry = makeRegistry(
+            root: root.appendingPathComponent("Plugins", isDirectory: true),
+            activationURL: root.appendingPathComponent("activations.json")
+        )
+
+        for json in ["", "not json", "[]", "{}"] {
+            XCTAssertThrowsError(try registry.install(manifestJSON: json)) { error in
+                XCTAssertEqual(error as? PluginPackageValidationError, .unreadableManifest)
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: registry.rootURL.path))
+        }
+
+        let data = try Data(contentsOf: repoRoot().appendingPathComponent("Examples/Plugins/ModelCatalog/plugin.json"))
+        var json = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        json["id"] = "../outside"
+        let invalidIdentity = String(decoding: try JSONSerialization.data(withJSONObject: json), as: UTF8.self)
+        XCTAssertThrowsError(try registry.install(manifestJSON: invalidIdentity)) { error in
+            guard case .invalidManifest = error as? PluginPackageValidationError else {
+                return XCTFail("Expected manifest validation failure, got \(error)")
+            }
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: registry.rootURL.path))
+    }
+
+    func testPastedManifestEnforcesUTF8ByteLimitBeforeDecoding() throws {
+        let root = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let registry = makeRegistry(
+            root: root.appendingPathComponent("Plugins", isDirectory: true),
+            activationURL: root.appendingPathComponent("activations.json")
+        )
+        let oversized = String(repeating: "字", count: PluginManifestLoader.maximumManifestBytes / 3 + 1)
+        XCTAssertLessThan(oversized.count, PluginManifestLoader.maximumManifestBytes)
+        XCTAssertThrowsError(try registry.install(manifestJSON: oversized)) { error in
+            XCTAssertEqual(error as? PluginPackageValidationError, .manifestTooLarge)
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: registry.rootURL.path))
+    }
+
+    func testPastedManifestRejectsTransportsThatNeedAPackageDirectory() throws {
+        let root = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let registry = makeRegistry(
+            root: root.appendingPathComponent("Plugins", isDirectory: true),
+            activationURL: root.appendingPathComponent("activations.json")
+        )
+        for transport in [PluginTransportKind.stdioJSON, .metadataOnly] {
+            let manifest = PluginManifest(
+                manifestVersion: 1,
+                id: "com.example.pasted",
+                displayName: "Pasted plugin",
+                version: "1.0.0",
+                protocolVersion: 1,
+                transport: transport,
+                entrypoint: transport == .stdioJSON ? "bin/plugin" : nil
+            )
+            let json = String(decoding: try JSONEncoder().encode(manifest), as: UTF8.self)
+            XCTAssertThrowsError(try registry.install(manifestJSON: json)) { error in
+                XCTAssertEqual(error as? ExternalPluginRegistryError, .pastedManifestRequiresHTTP)
+            }
+        }
+        XCTAssertFalse(FileManager.default.fileExists(atPath: registry.rootURL.path))
+    }
+
+    func testPastedUpdateReplacesOldFilesAndInvalidUpdatePreservesInstalledPackage() throws {
+        let root = temporaryDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let registry = makeRegistry(
+            root: root.appendingPathComponent("Plugins", isDirectory: true),
+            activationURL: root.appendingPathComponent("activations.json")
+        )
+        let original = try String(contentsOf: repoRoot().appendingPathComponent("Examples/Plugins/ModelCatalog/plugin.json"))
+        let first = try registry.install(manifestJSON: original)
+        let staleFile = first.packageURL.appendingPathComponent("obsolete.txt")
+        try Data("obsolete".utf8).write(to: staleFile)
+
+        var updated = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(original.utf8)) as? [String: Any])
+        updated["version"] = "2.0.0"
+        let updatedJSON = String(decoding: try JSONSerialization.data(withJSONObject: updated), as: UTF8.self)
+        let second = try registry.install(manifestJSON: updatedJSON)
+        XCTAssertEqual(second.packageURL, first.packageURL)
+        XCTAssertEqual(second.manifest.version, "2.0.0")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: staleFile.path))
+        XCTAssertThrowsError(try registry.install(manifestJSON: original.replacingOccurrences(of: "\"GET\"", with: "\"POST\"")))
+        XCTAssertEqual(
+            try String(contentsOf: second.packageURL.appendingPathComponent("plugin.json")),
+            updatedJSON
+        )
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: registry.rootURL.path), [first.manifest.id])
+    }
+
     func testDiscoveredExternalPluginsAreDisabledUntilExplicitlyEnabled() throws {
         let root = temporaryDirectory()
         let installRoot = root.appendingPathComponent("Plugins", isDirectory: true)

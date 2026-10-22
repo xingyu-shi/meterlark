@@ -30,8 +30,9 @@ Use this workflow when contributing a plugin:
    tokens in `plugin.json`, commit them, or print them from a `stdio-json`
    process.
 5. Install the package through **Settings → Plugins → Install / update
-   plugin**, configure it, explicitly enable it, and use **Refresh plugins** to
-   run a local smoke test.
+   plugin**, or use **Paste JSON…** for a manifest-only `http-json` plugin.
+   Configure it, explicitly enable it, and use **Refresh plugins** to run a
+   local smoke test.
 6. Open **Customize Dashboard layout** and verify that every block can be
    hidden, shown, reordered, and rendered with the expected data. The host
    owns the UI; a plugin contributes data and a dashboard document.
@@ -77,6 +78,15 @@ symbolic links. Installation validates a staged copy and does not run an
 entrypoint. The host rejects a `plugin.json` larger than 512 KiB before JSON
 decoding.
 
+For a manifest-only `http-json` plugin, choose **Settings → Plugins → Paste
+JSON…**, paste the complete `plugin.json` into the editor, and click **Install**.
+The editor also has a **Paste from clipboard** button. Pasted manifests use
+the same size limit, manifest validation, and staged package replacement as
+directory installation. A valid manifest with an existing plugin ID updates
+that package; an invalid manifest leaves the installed package unchanged.
+The paste installer accepts HTTP plugins only because executable files must
+be supplied in a package directory.
+
 Minimal manifest:
 
 ```json
@@ -91,9 +101,10 @@ Minimal manifest:
 }
 ```
 
-The plugin is disabled after installation. The user must explicitly enable
-it, and only enabled valid plugins are activated. `http-json` plugins are
-never launched as processes.
+New plugins are disabled after installation. The user must explicitly enable
+them, and only enabled valid plugins are activated. Updates preserve the
+plugin's configuration and enabled state. `http-json` plugins are never
+launched as processes.
 
 ## Localization
 

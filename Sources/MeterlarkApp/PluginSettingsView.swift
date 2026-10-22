@@ -1,8 +1,10 @@
+import AppKit
 import SwiftUI
 
 struct PluginSettingsView: View {
     @ObservedObject var store: MonitorStore
     let onClose: () -> Void
+    @State private var showingPasteInstaller = false
 
     private var copy: L10n { L10n(language: store.settings.language) }
 
@@ -36,6 +38,9 @@ struct PluginSettingsView: View {
         .preferredColorScheme(preferredColorScheme)
         .appInterfaceTextSize(store.settings.interfaceTextSize)
         .environment(\.appSurfaceStyle, store.settings.surfaceStyle)
+        .sheet(isPresented: $showingPasteInstaller) {
+            PastePluginInstallView(store: store)
+        }
     }
 
     private var header: some View {
@@ -151,7 +156,12 @@ struct PluginSettingsView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
 
-            Button(copy.installExternalPlugin, action: store.chooseAndInstallExternalPlugin)
+            HStack {
+                Button(copy.installExternalPlugin, action: store.chooseAndInstallExternalPlugin)
+                Button(copy.pasteExternalPlugin) {
+                    showingPasteInstaller = true
+                }
+            }
 
             if let externalPluginError = store.externalPluginError {
                 Text(externalPluginError)
@@ -198,5 +208,69 @@ struct PluginSettingsView: View {
             return url.deletingLastPathComponent().lastPathComponent
         }
         return url.lastPathComponent.isEmpty ? issue.path : url.lastPathComponent
+    }
+}
+
+private struct PastePluginInstallView: View {
+    @ObservedObject var store: MonitorStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var manifestJSON = ""
+    @State private var errorMessage: String?
+
+    private var copy: L10n { L10n(language: store.settings.language) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(copy.pastePluginTitle)
+                .appFont(.section)
+                .foregroundStyle(AppWindowTheme.primary)
+            Text(copy.pastePluginHelp)
+                .appFont(.metadata)
+                .foregroundStyle(AppWindowTheme.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            TextEditor(text: $manifestJSON)
+                .font(.system(.body, design: .monospaced))
+                .disableAutocorrection(true)
+                .padding(6)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(AppWindowTheme.secondary.opacity(0.3)))
+                .accessibilityLabel(copy.pluginManifestJSON)
+                .accessibilityIdentifier("plugin-manifest-json")
+
+            if let errorMessage {
+                Text(errorMessage)
+                    .appFont(.metadata)
+                    .foregroundStyle(AppWindowTheme.alert)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            HStack {
+                Button(copy.pasteFromClipboard) {
+                    guard let text = NSPasteboard.general.string(forType: .string), !text.isEmpty else {
+                        errorMessage = copy.clipboardHasNoText
+                        return
+                    }
+                    manifestJSON = text
+                    errorMessage = nil
+                }
+                Spacer()
+                Button(copy.cancel) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button(copy.installPlugin) {
+                    do {
+                        try store.installExternalPlugin(manifestJSON: manifestJSON)
+                        dismiss()
+                    } catch {
+                        errorMessage = copy.pastePluginError(error)
+                    }
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(manifestJSON.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            }
+        }
+        .padding(22)
+        .frame(width: 540, height: 420)
+        .background(AppSurfaceBackground(style: store.settings.surfaceStyle))
+        .onChange(of: manifestJSON) { _ in errorMessage = nil }
     }
 }

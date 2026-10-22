@@ -3,6 +3,7 @@ import Foundation
 enum ExternalPluginRegistryError: Error, Equatable, Sendable {
     case pluginNotInstalled
     case unsupportedTransport
+    case pastedManifestRequiresHTTP
     case invalidPackage
     case invalidConfiguration
     case configurationSchemaUnavailable
@@ -15,6 +16,8 @@ extension ExternalPluginRegistryError: LocalizedError {
             return "The external plugin is not installed."
         case .unsupportedTransport:
             return "Only stdio-json and http-json external plugins can be installed."
+        case .pastedManifestRequiresHTTP:
+            return "Paste installation supports http-json plugins. Install plugins with executable files from a package directory."
         case .invalidPackage:
             return "The external plugin package is invalid."
         case .invalidConfiguration:
@@ -204,6 +207,35 @@ struct ExternalPluginRegistry {
             throw ExternalPluginRegistryError.unsupportedTransport
         }
         return try installer.install(from: sourceURL, into: rootURL)
+    }
+
+    @discardableResult
+    func install(manifestJSON: String) throws -> ValidatedPluginPackage {
+        guard manifestJSON.utf8.count <= PluginManifestLoader.maximumManifestBytes else {
+            throw PluginPackageValidationError.manifestTooLarge
+        }
+        let data = Data(manifestJSON.utf8)
+        let manifest: PluginManifest
+        do {
+            manifest = try JSONDecoder().decode(PluginManifest.self, from: data)
+        } catch {
+            throw PluginPackageValidationError.unreadableManifest
+        }
+        guard manifest.transport == .httpJSON else {
+            throw ExternalPluginRegistryError.pastedManifestRequiresHTTP
+        }
+
+        let fileManager = FileManager.default
+        let packageURL = fileManager.temporaryDirectory
+            .appendingPathComponent("Meterlark.PluginPaste.\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(
+            at: packageURL,
+            withIntermediateDirectories: false,
+            attributes: [.posixPermissions: 0o700]
+        )
+        defer { try? fileManager.removeItem(at: packageURL) }
+        try data.write(to: packageURL.appendingPathComponent("plugin.json"), options: .atomic)
+        return try install(from: packageURL)
     }
 
     func setEnabled(_ enabled: Bool, pluginID: String) throws {

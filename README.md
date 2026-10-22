@@ -68,6 +68,12 @@ Meterlark starts with no installed providers. Install a trusted `http-json` or
 credentials, and enable it explicitly. Secret fields are stored in macOS
 Keychain. You can add enabled plugin blocks to the host-owned Dashboard layout.
 
+For an HTTP plugin, choose **Paste JSON…**, paste the complete `plugin.json`,
+and click **Install**. You can paste with the keyboard or use **Paste from
+clipboard** in the editor. The manifest is validated before installation and
+must be 512 KiB or smaller. Plugins with executable files use the package
+directory installer.
+
 Two optional templates live in [`Examples/Plugins/`](Examples/Plugins/):
 
 | Example | Capability | Package |
@@ -112,7 +118,7 @@ This source revision bundles `ccusage 20.0.32` and recognizes these local harnes
 ### Distribution
 
 Build Meterlark from source with the steps below. The packaging script produces
-`dist/Meterlark.app` and `dist/Meterlark-1.1.1-arm64.zip`. Published archives, when
+`dist/Meterlark.app` and `dist/Meterlark-1.2.0-arm64.zip`. Published archives, when
 available, are listed on the [Releases page](https://github.com/xingyu-shi/meterlark/releases).
 
 Builds are ad-hoc signed and are not notarized. On first launch, Control-click

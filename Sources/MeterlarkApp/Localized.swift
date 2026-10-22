@@ -557,6 +557,33 @@ struct L10n: Sendable {
     var activeProviders: String { text("Active providers", "已启用的 Provider") }
     var externalPlugins: String { text("External plugins", "外部插件") }
     var installExternalPlugin: String { text("Install / update plugin", "安装 / 更新插件") }
+    var pasteExternalPlugin: String { text("Paste JSON…", "粘贴 JSON 安装…") }
+    var pastePluginTitle: String { text("Install plugin from JSON", "粘贴 JSON 安装插件") }
+    var pastePluginHelp: String {
+        text(
+            "Paste the complete plugin.json for an HTTP plugin. New plugins start disabled; configure and enable them in the plugin list.",
+            "粘贴 HTTP 插件的完整 plugin.json。新插件安装后默认关闭，请在插件列表中配置并启用。"
+        )
+    }
+    var pluginManifestJSON: String { text("Plugin JSON", "插件 JSON") }
+    var pasteFromClipboard: String { text("Paste from clipboard", "从剪贴板粘贴") }
+    var clipboardHasNoText: String { text("The clipboard does not contain text.", "剪贴板中没有文本。") }
+    var installPlugin: String { text("Install", "安装") }
+    func pastePluginError(_ error: Error) -> String {
+        if error as? ExternalPluginRegistryError == .pastedManifestRequiresHTTP {
+            return text(
+                "Paste installation supports HTTP plugins. Install plugins with executable files from a package directory.",
+                "粘贴安装支持 HTTP 插件。包含脚本或可执行文件的插件请通过文件夹安装。"
+            )
+        }
+        if error as? PluginPackageValidationError == .unreadableManifest {
+            return text("Paste valid JSON for a complete plugin.json.", "请粘贴完整且格式正确的 plugin.json。")
+        }
+        if error as? PluginPackageValidationError == .manifestTooLarge {
+            return text("Plugin JSON must be 512 KiB or smaller.", "插件 JSON 不能超过 512 KiB。")
+        }
+        return error.localizedDescription
+    }
     var externalPluginInstallMessage: String {
         text(
             "Choose an external plugin package directory. The package is validated before it is installed and starts disabled.",

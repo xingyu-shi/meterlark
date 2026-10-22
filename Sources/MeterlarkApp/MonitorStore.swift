@@ -1209,6 +1209,14 @@ final class MonitorStore: ObservableObject {
         }
     }
 
+    func installExternalPlugin(manifestJSON: String) throws {
+        guard let externalPluginRegistry else {
+            throw ExternalPluginRegistryError.pluginNotInstalled
+        }
+        let installed = try externalPluginRegistry.install(manifestJSON: manifestJSON)
+        didInstallExternalPlugin(installed)
+    }
+
     func setExternalPluginEnabled(pluginID: String, enabled: Bool) {
         guard let externalPluginRegistry else { return }
         do {
@@ -1710,15 +1718,19 @@ final class MonitorStore: ObservableObject {
         guard let externalPluginRegistry else { return }
         do {
             let installed = try externalPluginRegistry.install(from: sourceURL)
-            externalPluginError = nil
-            reloadExternalPlugins(
-                replacingIDs: [installed.manifest.id],
-                pluginIDsToRefresh: [installed.manifest.id]
-            )
+            didInstallExternalPlugin(installed)
         } catch {
             externalPluginError = error.localizedDescription
             refreshPluginSettingsWindow()
         }
+    }
+
+    private func didInstallExternalPlugin(_ installed: ValidatedPluginPackage) {
+        externalPluginError = nil
+        reloadExternalPlugins(
+            replacingIDs: [installed.manifest.id],
+            pluginIDsToRefresh: [installed.manifest.id]
+        )
     }
 
     private func finishImportCustomPricing(mode: CustomPricingImportMode, url: URL) {

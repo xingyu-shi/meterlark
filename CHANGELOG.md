@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+
+- Install HTTP plugins by pasting their complete JSON manifest in Settings → Plugins, with an editable preview and clipboard paste button.
+
 ### Changed
 
 - Establish Meterlark as an independent macOS menu-bar application for AI coding usage, cost estimates, budgets, and extensible dashboards.
