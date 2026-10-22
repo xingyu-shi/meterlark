@@ -186,6 +186,34 @@ final class SettingsTests: XCTestCase {
         )
     }
 
+    func testFitContentHeightUsesMeasuredContentAndCapsAtTheScreen() {
+        for measuredHeight in [740.0, 1_080.0] {
+            XCTAssertEqual(
+                MonitorSettings.effectivePopoverHeight(
+                    storedHeight: MonitorSettings.compactPopoverHeight,
+                    dailyCostLimit: 0,
+                    monthlyCostLimit: 0,
+                    contentHeight: measuredHeight,
+                    maximumVisibleHeight: 960
+                ),
+                min(measuredHeight, 960)
+            )
+        }
+    }
+
+    func testFixedHeightFitsSmallScreensWithoutUsingContentHeight() {
+        XCTAssertEqual(
+            MonitorSettings.effectivePopoverHeight(
+                storedHeight: 940,
+                dailyCostLimit: 0,
+                monthlyCostLimit: 0,
+                contentHeight: 1_200,
+                maximumVisibleHeight: 700
+            ),
+            700
+        )
+    }
+
     func testCustomPricingPathPersistsAcrossSettingsLoads() {
         let suiteName = "Meterlark.SettingsTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

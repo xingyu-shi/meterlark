@@ -565,7 +565,9 @@ final class MonitorStore: ObservableObject {
 
     func effectivePopoverHeight(
         for layout: DashboardLayout?,
-        storedHeight: Double? = nil
+        storedHeight: Double? = nil,
+        contentHeight: Double? = nil,
+        maximumVisibleHeight: Double? = nil
     ) -> Double {
         let selectedLayout = layout ?? dashboardLayout
         return MonitorSettings.effectivePopoverHeight(
@@ -573,11 +575,12 @@ final class MonitorStore: ObservableObject {
             dailyCostLimit: settings.dailyCostLimit,
             monthlyCostLimit: settings.monthlyCostLimit,
             interfaceTextSize: settings.interfaceTextSize,
-            contentHeight: DashboardLayoutMetrics.estimatedPopoverHeight(
+            contentHeight: contentHeight ?? DashboardLayoutMetrics.estimatedPopoverHeight(
                 components: visibleDashboardComponents(for: selectedLayout),
                 layout: selectedLayout,
                 interfaceTextSize: settings.interfaceTextSize
-            )
+            ),
+            maximumVisibleHeight: maximumVisibleHeight
         )
     }
 

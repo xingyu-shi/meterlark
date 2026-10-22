@@ -10,7 +10,7 @@ Before publishing source or an app archive:
    [Gitleaks](https://github.com/gitleaks/gitleaks). Scan every branch and tag
    being published. A clean current tree does not establish that its history
    is clean. Investigate scanner findings without printing candidate secrets.
-3. Run `swift test --build-system native`, then `./scripts/package-app.sh`. The package script
+3. Run `swift test -c release --build-system native`, then `./scripts/package-app.sh`. The package script
    recreates its app bundle, validates the pinned reporting engine, checks
    signing and architecture, verifies the linked SDK version, and checks the ZIP archive.
    It uses the native build engine to avoid

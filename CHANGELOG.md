@@ -8,6 +8,8 @@
 
 ### Changed
 
+- Fit the default dashboard height to its rendered content and limit it to the current screen's available height.
+- Fix valid menu-bar formats being rejected as control characters in optimized builds, and run CI tests in Release mode.
 - Show pricing status as a compact colored icon, keeping details in its popover and the last-refresh time on one line.
 - Apply appearance settings to the plugin paste window.
 - Build release packages with the native SwiftPM engine and verify the linked SDK version, avoiding incorrect system UI behavior from SwiftPM 6.4's default engine.

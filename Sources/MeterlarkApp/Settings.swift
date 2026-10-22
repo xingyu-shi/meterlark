@@ -279,21 +279,29 @@ struct MonitorSettings: Equatable, Sendable {
         dailyCostLimit: Double,
         monthlyCostLimit: Double,
         interfaceTextSize: InterfaceTextSize = .standard,
-        contentHeight: Double? = nil
+        contentHeight: Double? = nil,
+        maximumVisibleHeight: Double? = nil
     ) -> Double {
-        guard storedHeight == compactPopoverHeight else { return storedHeight }
-        if let contentHeight, contentHeight.isFinite {
-            return min(maximumPopoverHeight, max(minimumPopoverHeight, contentHeight))
+        let height: Double
+        if storedHeight != compactPopoverHeight {
+            height = storedHeight
+        } else if let contentHeight, contentHeight.isFinite {
+            height = min(maximumPopoverHeight, max(minimumPopoverHeight, contentHeight))
+        } else {
+            let hasDailyBudget = validCostLimit(dailyCostLimit) > 0
+            let hasMonthlyBudget = validCostLimit(monthlyCostLimit) > 0
+            if hasDailyBudget && hasMonthlyBudget {
+                height = interfaceTextSize.compactPopoverHeightWithBothBudgets
+            } else if hasDailyBudget || hasMonthlyBudget {
+                height = interfaceTextSize.compactPopoverHeightWithBudget
+            } else {
+                height = interfaceTextSize.compactPopoverHeight
+            }
         }
-        let hasDailyBudget = validCostLimit(dailyCostLimit) > 0
-        let hasMonthlyBudget = validCostLimit(monthlyCostLimit) > 0
-        if hasDailyBudget && hasMonthlyBudget {
-            return interfaceTextSize.compactPopoverHeightWithBothBudgets
+        if let maximumVisibleHeight, maximumVisibleHeight.isFinite, maximumVisibleHeight > 0 {
+            return min(height, maximumVisibleHeight)
         }
-        if hasDailyBudget || hasMonthlyBudget {
-            return interfaceTextSize.compactPopoverHeightWithBudget
-        }
-        return interfaceTextSize.compactPopoverHeight
+        return height
     }
 
     static func validCostLimit(_ value: Double?) -> Double {

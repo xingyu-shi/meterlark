@@ -47,7 +47,7 @@ struct MenuBarFormat: Equatable, Sendable {
         let value = rawValue
         guard !value.isEmpty else { return .failure(.empty) }
         guard value.count <= maximumLength else { return .failure(.tooLong) }
-        guard !value.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+        guard !value.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }) else {
             return .failure(.controlCharacter)
         }
 

@@ -43,6 +43,8 @@ struct MonitorPopover: View {
     @State private var showAllModels = false
     @State private var isDatePinned = false
     @State private var isNotificationFeedPresented = false
+    @State private var measuredContentHeight: Double?
+    @State private var maximumVisibleHeight: Double?
 
     init(
         store: MonitorStore,
@@ -68,7 +70,7 @@ struct MonitorPopover: View {
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: shouldShowScrollIndicator) {
-            LazyVStack(alignment: .leading, spacing: CGFloat(store.settings.interfaceTextSize.sectionSpacing)) {
+            VStack(alignment: .leading, spacing: CGFloat(store.settings.interfaceTextSize.sectionSpacing)) {
                 header
                 ForEach(store.visibleDashboardComponents(for: layoutOverride)) { component in
                     dashboardComponentView(component)
@@ -76,13 +78,18 @@ struct MonitorPopover: View {
                 footer
             }
             .padding(CGFloat(store.settings.interfaceTextSize.contentPadding))
+            .background {
+                GeometryReader { geometry in
+                    Color.clear.preference(
+                        key: PopoverContentHeightKey.self,
+                        value: ceil(geometry.size.height)
+                    )
+                }
+            }
         }
         .frame(
             width: CGFloat(store.settings.interfaceTextSize.popoverWidth),
-            height: CGFloat(store.effectivePopoverHeight(
-                for: layoutOverride,
-                storedHeight: popoverHeightOverride
-            )),
+            height: CGFloat(resolvedPopoverHeight),
             alignment: .top
         )
         .background(AppSurfaceBackground(style: store.settings.surfaceStyle))
@@ -93,14 +100,32 @@ struct MonitorPopover: View {
         .preferredColorScheme(preferredColorScheme)
         .appInterfaceTextSize(store.settings.interfaceTextSize)
         .environment(\.appSurfaceStyle, store.settings.surfaceStyle)
+        .background(PopoverScreenHeightReader { height in
+            if maximumVisibleHeight != height {
+                maximumVisibleHeight = height
+            }
+        })
+        .onPreferenceChange(PopoverContentHeightKey.self) { height in
+            if height > 0, height.isFinite, measuredContentHeight != Double(height) {
+                measuredContentHeight = Double(height)
+            }
+        }
+    }
+
+    private var resolvedPopoverHeight: Double {
+        store.effectivePopoverHeight(
+            for: layoutOverride,
+            storedHeight: popoverHeightOverride,
+            contentHeight: measuredContentHeight,
+            maximumVisibleHeight: maximumVisibleHeight
+        )
     }
 
     private var shouldShowScrollIndicator: Bool {
-        store.settings.interfaceTextSize != .standard
-            || (popoverHeightOverride ?? store.settings.popoverHeight) != MonitorSettings.compactPopoverHeight
-            || showAllModels
-            || isDatePinned
-            || !store.pluginStates.isEmpty
+        (measuredContentHeight ?? store.effectivePopoverHeight(
+            for: layoutOverride,
+            storedHeight: MonitorSettings.compactPopoverHeight
+        )) > resolvedPopoverHeight + 1
     }
 
     private var header: some View {
