@@ -663,7 +663,7 @@ struct PluginConfigurationStore {
     init(
         fileManager: FileManager = .default,
         baseURL: URL? = nil,
-        secretStore: any PluginSecretStore = MigratingPluginSecretStore()
+        secretStore: any PluginSecretStore = KeychainSecretStore()
     ) {
         self.fileManager = fileManager
         self.baseURL = baseURL ?? fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]

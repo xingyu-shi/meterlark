@@ -7,17 +7,6 @@ struct MeterlarkApp: App {
 
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
-        do {
-            try LegacyDataMigration.prepare()
-        } catch {
-            let copy = L10n(language: .system)
-            let alert = NSAlert()
-            alert.messageText = copy.dataMigrationFailedTitle
-            alert.informativeText = copy.dataMigrationFailedMessage
-            alert.addButton(withTitle: copy.quitApp)
-            alert.runModal()
-            exit(EXIT_FAILURE)
-        }
         let externalPlugins = ExternalPluginRegistry()
         // The host starts empty. External packages become providers only
         // after they are installed, configured, and explicitly enabled.

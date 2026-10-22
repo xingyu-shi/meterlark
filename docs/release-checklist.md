@@ -5,7 +5,7 @@ Before publishing source or an app archive:
 1. Run `python3 scripts/check-public-content.py`. Review every finding. The
    check covers tracked source and non-ignored new files, rejects private
    addresses, personal paths, email addresses, unapproved URL hosts, common
-   credential formats, and obsolete product identities outside migration code.
+   credential formats, and obsolete product identities.
 2. Run `gitleaks git . --log-opts=--all --redact=100` with
    [Gitleaks](https://github.com/gitleaks/gitleaks). Scan every branch and tag
    being published. A clean current tree does not establish that its history

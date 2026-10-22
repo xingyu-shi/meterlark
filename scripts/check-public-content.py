@@ -14,9 +14,6 @@ PUBLIC_HOSTS = {
     "www.w3.org", "www.apple.com",
 }
 LEGACY_NAME = re.compile(r"ccusage[ _-]?monitor|ccusage-menubar", re.IGNORECASE)
-COMPATIBILITY_FILES = {
-    "Sources/MeterlarkApp/LegacyDataMigration.swift", "README.md", "README.github.md",
-}
 SECRET_PATTERNS = {
     "GitHub credential": re.compile(r"\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{30,})\b"),
     "provider credential": re.compile(r"\bsk-(?:ant-|proj-)?[A-Za-z0-9_-]{32,}\b"),
@@ -58,7 +55,7 @@ def check(root):
         checked += 1
         for number, line in enumerate(text.splitlines(), 1):
             reasons = []
-            if relative not in COMPATIBILITY_FILES and LEGACY_NAME.search(line):
+            if LEGACY_NAME.search(line):
                 reasons.append("obsolete product identity")
             for label, pattern in SECRET_PATTERNS.items():
                 if pattern.search(line):

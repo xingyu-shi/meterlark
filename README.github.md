@@ -131,7 +131,7 @@ For a source build, the pinned native binary is included at `Resources/ccusage`:
 file Resources/ccusage
 ```
 
-Before upgrading an existing installation, follow the [upgrade steps](#upgrading-an-existing-installation). Then build and install the menu-bar app:
+Build and install the menu-bar app:
 
 ```sh
 git clone https://github.com/xingyu-shi/meterlark.git
@@ -142,25 +142,6 @@ cd meterlark
 The app is installed at `~/Applications/Meterlark.app`. Open it from Finder, Spotlight, or Launchpad. No terminal needs to stay open.
 
 This repository is a personal build and is not notarized. If macOS blocks the first launch, Control-click the app in Finder and choose **Open**.
-
-### Upgrading an existing installation
-
-1. Switch off launch at login in the previous app, then quit it.
-2. Install Meterlark and remove the previous app bundle from Applications. Keep its saved data.
-3. Open Meterlark and enable launch at login again if needed. Run one copy at a time.
-
-Meterlark uses the `com.xingyu.meterlark` bundle identifier and the
-`~/Library/Application Support/Meterlark/` data directory. On first launch it
-copies data and preferences from the former CCUsage Monitor installation without
-removing the original files. Existing Meterlark data and preferences take
-precedence. Saved plugin credentials are copied to the new Keychain service on
-first use. The old product identifiers are isolated in
-[`LegacyDataMigration.swift`](Sources/MeterlarkApp/LegacyDataMigration.swift).
-
-Organization-specific providers are not distributed with this app. Existing
-user-installed packages remain local and can still be configured independently.
-If a data import fails, Meterlark explains the problem and exits before starting
-the monitor; resolve the access issue and launch it again.
 
 ## Using it
 

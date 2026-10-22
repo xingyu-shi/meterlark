@@ -614,15 +614,6 @@ struct L10n: Sendable {
         )
     }
     var about: String { text("About", "关于") }
-    var dataMigrationFailedTitle: String {
-        text("Meterlark could not import your previous data.", "Meterlark 无法导入之前的数据。")
-    }
-    var dataMigrationFailedMessage: String {
-        text(
-            "Your previous data has not been removed. Check access to your Library/Application Support folder, then open Meterlark again.",
-            "之前的数据没有被删除。请检查 Library/Application Support 文件夹的访问权限，然后重新打开 Meterlark。"
-        )
-    }
     var aboutWindowTitle: String { text("About Meterlark", "关于 Meterlark") }
     var aboutSubtitle: String { text("Local usage and pricing monitor", "本地用量与价格监视器") }
     var aboutDetails: String { text("API-equivalent estimates · No telemetry", "API 等价费用估算 · 不收集遥测") }
