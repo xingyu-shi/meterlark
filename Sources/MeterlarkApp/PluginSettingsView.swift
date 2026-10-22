@@ -219,6 +219,14 @@ private struct PastePluginInstallView: View {
 
     private var copy: L10n { L10n(language: store.settings.language) }
 
+    private var preferredColorScheme: ColorScheme? {
+        switch store.settings.appearance {
+        case .automatic: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(copy.pastePluginTitle)
@@ -271,6 +279,13 @@ private struct PastePluginInstallView: View {
         .padding(22)
         .frame(width: 540, height: 420)
         .background(AppSurfaceBackground(style: store.settings.surfaceStyle))
+        .background(WindowAppearanceBridge(
+            appearance: store.settings.appearance,
+            surfaceStyle: store.settings.surfaceStyle
+        ))
+        .preferredColorScheme(preferredColorScheme)
+        .appInterfaceTextSize(store.settings.interfaceTextSize)
+        .environment(\.appSurfaceStyle, store.settings.surfaceStyle)
         .onChange(of: manifestJSON) { _ in errorMessage = nil }
     }
 }
