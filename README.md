@@ -117,9 +117,14 @@ This source revision bundles `ccusage 20.0.32` and recognizes these local harnes
 
 ### Distribution
 
-Build Meterlark from source with the steps below. The packaging script produces
-`dist/Meterlark.app` and `dist/Meterlark-1.2.8-arm64.zip`. Published archives, when
-available, are listed on the [Releases page](https://github.com/xingyu-shi/meterlark/releases).
+Download [Meterlark 1.2.9 for Apple Silicon](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.9/Meterlark-1.2.9-arm64.zip),
+unzip it, and move **Meterlark.app** to **Applications** (or `~/Applications`).
+The release includes a [SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.9/Meterlark-1.2.9-arm64.zip.sha256).
+See [all releases](https://github.com/xingyu-shi/meterlark/releases) and the
+[version history](CHANGELOG.md) for changes.
+
+To build from source, follow the steps below. The packaging script produces
+`dist/Meterlark.app` and a versioned Apple Silicon ZIP in `dist/`.
 
 Builds are ad-hoc signed and are not notarized. On first launch, Control-click
 the app in Finder and choose **Open** if macOS asks for confirmation.

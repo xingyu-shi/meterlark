@@ -2,25 +2,39 @@
 
 Before publishing source or an app archive:
 
-1. Run `python3 scripts/check-public-content.py`. Review every finding. The
+1. Match the version and build in `Resources/Info.plist` to a dated version
+   entry in `CHANGELOG.md`. Move completed changes out of `Unreleased`, keep
+   historical entries, and update the download links in both README files.
+2. Run `python3 scripts/check-public-content.py`. Review every finding. The
    check covers tracked source and non-ignored new files, rejects private
    addresses, personal paths, email addresses, unapproved URL hosts, common
    credential formats, and obsolete product identities.
-2. Run `gitleaks git . --log-opts=--all --redact=100` with
-   [Gitleaks](https://github.com/gitleaks/gitleaks). Scan every branch and tag
-   being published. A clean current tree does not establish that its history
-   is clean. Investigate scanner findings without printing candidate secrets.
-3. Run `swift test -c release --build-system native`, then `./scripts/package-app.sh`. The package script
+3. Make an isolated clone containing only the branch and any new tags being
+   published, without unrelated local refs. Run
+   `gitleaks git <isolated-checkout> --log-opts=--all --redact=100` with
+   [Gitleaks](https://github.com/gitleaks/gitleaks). A clean current tree does
+   not establish that its history is clean. Investigate scanner findings
+   without printing candidate secrets.
+4. Run `swift test -c release --build-system native`, then `./scripts/package-app.sh`. The package script
    recreates its app bundle, validates the pinned reporting engine, checks
    signing and architecture, verifies the linked SDK version, and checks the ZIP archive.
    It uses the native build engine to avoid
    [SwiftPM's incorrect SDK stamp](https://github.com/swiftlang/swift-package-manager/issues/10696),
    which can change AppKit and SwiftUI behavior even when the source is unchanged.
-4. Inspect the archive for unintended plugins, local configuration, logs,
+5. Inspect the archive for unintended plugins, local configuration, logs,
    credentials, personal metadata, and build paths. Examples use reserved
    domains and are distributed only as source templates.
-5. Verify the exact remote revision, its reachable branches and tags, and CI.
+6. Verify the exact remote revision, its reachable branches and tags, and CI.
    Changing repository visibility is a separate publishing decision.
+7. Create a new `v<version>` tag at that reviewed revision and push only that
+   tag to `xingyu-shi/meterlark`. Do not push unrelated local tags or branches.
+8. Create a GitHub Release for the new tag, with user-facing notes from the
+   versioned changelog, the exact versioned ZIP, and a SHA-256 checksum file
+   that names that ZIP. Upload explicit filenames, not a directory wildcard.
+   Verify that the release is published, is marked latest when appropriate,
+   and that its downloadable ZIP matches the local checksum. A pushed commit
+   or tag alone does not publish a GitHub Release. When restoring historical
+   notes, do not invent old release assets or publish unaudited old refs.
 
 CI runs the source-content check and a checksum-verified Gitleaks build with a
 read-only repository token. Add a public URL host to the checker only after
