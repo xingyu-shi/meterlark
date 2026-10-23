@@ -2,6 +2,10 @@
 
 Before publishing source or an app archive:
 
+Develop source changes on a feature branch and merge through a PR under the
+[contribution rules](../CONTRIBUTING.md). Release tags must point to commits
+already merged into `main`.
+
 1. Match the version and build in `Resources/Info.plist` to a dated version
    entry in `CHANGELOG.md`. Move completed changes out of `Unreleased`, keep
    historical entries, and update the download links in both README files.
@@ -37,7 +41,8 @@ Before publishing source or an app archive:
    The DMG script
    mounts the image and verifies the copied app's signature; avoid adding
    FinderInfo metadata to the signed app bundle.
-6. Verify the exact remote revision, its reachable branches and tags, and CI.
+6. Verify that the PR is merged into `main`, then verify the exact remote revision,
+   its reachable branches and tags, and CI.
    Changing repository visibility is a separate publishing decision.
 7. Create a new `v<version>` tag at that reviewed revision and push only that
    tag to `xingyu-shi/meterlark`. Do not push unrelated local tags or branches.
