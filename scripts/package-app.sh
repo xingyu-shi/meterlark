@@ -60,7 +60,20 @@ cp "$ROOT/Resources/ccusage" "$APP/Contents/Resources/ccusage"
 chmod 755 "$APP/Contents/Resources/ccusage"
 cp "$ROOT/Resources/THIRD_PARTY_NOTICES.txt" "$APP/Contents/Resources/THIRD_PARTY_NOTICES.txt"
 cp "$ROOT/Resources/Meterlark-mark.png" "$APP/Contents/Resources/Meterlark-mark.png"
-codesign --force --deep --sign - "$APP" >/dev/null
+# Ad-hoc signing by default. A Developer ID build signs the nested ccusage
+# executable first with the hardened runtime, because --deep is not suitable
+# for distribution signing.
+SIGN_IDENTITY="${SIGN_IDENTITY:--}"
+if [[ "$SIGN_IDENTITY" == "-" ]]; then
+	codesign --force --deep --sign - "$APP" >/dev/null
+else
+	SIGN_ARGS=(--force --options runtime --timestamp --sign "$SIGN_IDENTITY")
+	if [[ -n "${SIGNING_KEYCHAIN:-}" ]]; then
+		SIGN_ARGS+=(--keychain "$SIGNING_KEYCHAIN")
+	fi
+	codesign "${SIGN_ARGS[@]}" "$APP/Contents/Resources/ccusage"
+	codesign "${SIGN_ARGS[@]}" "$APP"
+fi
 
 for executable in \
 	"$APP/Contents/MacOS/Meterlark" \
@@ -71,6 +84,32 @@ for executable in \
 	fi
 done
 codesign --verify --deep --strict "$APP"
+
+# Notarize only when App Store Connect API key credentials are provided.
+if [[ -n "${APPLE_API_KEY_PATH:-}" ]]; then
+	if [[ "$SIGN_IDENTITY" == "-" ]]; then
+		print -u2 "Notarization requires SIGN_IDENTITY to be a Developer ID identity"
+		exit 1
+	fi
+	NOTARY_ARGS=(--key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER")
+	NOTARY_UPLOAD="$ROOT/dist/Meterlark-notary-upload.zip"
+	ditto -c -k --norsrc --keepParent "$APP" "$NOTARY_UPLOAD"
+	NOTARY_RESULT="$(xcrun notarytool submit "$NOTARY_UPLOAD" "${NOTARY_ARGS[@]}" --wait --output-format json)" || true
+	rm -f "$NOTARY_UPLOAD"
+	NOTARY_STATUS="$(print -r -- "$NOTARY_RESULT" | plutil -extract status raw -o - - 2>/dev/null || true)"
+	if [[ "$NOTARY_STATUS" != "Accepted" ]]; then
+		print -u2 "Notarization failed: $NOTARY_RESULT"
+		NOTARY_ID="$(print -r -- "$NOTARY_RESULT" | plutil -extract id raw -o - - 2>/dev/null || true)"
+		if [[ -n "$NOTARY_ID" ]]; then
+			xcrun notarytool log "$NOTARY_ID" "${NOTARY_ARGS[@]}" >&2 || true
+		fi
+		exit 1
+	fi
+	xcrun stapler staple "$APP"
+	xcrun stapler validate "$APP"
+	spctl --assess --type execute --verbose=2 "$APP"
+fi
+
 ditto -c -k --norsrc --keepParent "$APP" "$ARCHIVE"
 unzip -t "$ARCHIVE" >/dev/null
 if unzip -Z1 "$ARCHIVE" | grep -q '\._'; then

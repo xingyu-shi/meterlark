@@ -641,7 +641,7 @@ struct L10n: Sendable {
     var version: String { text("Version", "版本") }
     var build: String { text("Build", "构建") }
     var bundledCCUsage: String { text("Bundled ccusage", "内置 ccusage") }
-    var bundledCCUsageHash: String { text("ccusage SHA-256", "ccusage SHA-256") }
+    var bundledCCUsageHash: String { text("ccusage SHA-256 (upstream, before signing)", "ccusage SHA-256（上游，签名前）") }
     var developerDiagnosticsTitle: String { text("Developer Diagnostics", "开发者诊断") }
     var developerDiagnosticsSubtitle: String {
         text(

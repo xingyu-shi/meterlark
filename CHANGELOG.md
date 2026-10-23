@@ -7,6 +7,17 @@ releases in this repository. Historical provider integrations are summarized
 without organization-specific names or deployment details, and may no longer be
 included in Meterlark.
 
+## 1.2.10 · 2026-10-23
+
+### Improved
+
+- Sign release downloads with a Developer ID certificate and notarize them with Apple, so the app opens without a Gatekeeper warning.
+- Label the About window's ccusage checksum as the upstream value before signing.
+
+### Verification
+
+- A local Developer ID build passed notarization, stapling, and a Gatekeeper assessment of a quarantined copy.
+
 ## 1.2.9 · 2026-10-23
 
 ### Fixed

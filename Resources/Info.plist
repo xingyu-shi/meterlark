@@ -17,9 +17,9 @@
 	<key>CFBundleIconFile</key>
 	<string>Meterlark-mark.png</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.9</string>
+	<string>1.2.10</string>
 	<key>CFBundleVersion</key>
-	<string>36</string>
+	<string>37</string>
 	<key>CCUsageVersion</key>
 	<string>20.0.32</string>
 	<key>CCUsageSHA256</key>

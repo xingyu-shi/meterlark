@@ -28,9 +28,13 @@ Before publishing source or an app archive:
    Changing repository visibility is a separate publishing decision.
 7. Create a new `v<version>` tag at that reviewed revision and push only that
    tag to `xingyu-shi/meterlark`. Do not push unrelated local tags or branches.
-8. Create a GitHub Release for the new tag, with user-facing notes from the
-   versioned changelog, the exact versioned ZIP, and a SHA-256 checksum file
-   that names that ZIP. Upload explicit filenames, not a directory wildcard.
+8. Pushing the tag runs the Release workflow. It tests, signs with the
+   Developer ID certificate, notarizes and staples the app, and creates a
+   draft GitHub Release with the exact versioned ZIP and a SHA-256 checksum
+   file that names that ZIP. Keep the signing secrets in the `release`
+   environment, limited to `v*` tags with a required reviewer. Replace the
+   generated notes with user-facing notes from the
+   versioned changelog, then publish the draft.
    Verify that the release is published, is marked latest when appropriate,
    and that its downloadable ZIP matches the local checksum. A pushed commit
    or tag alone does not publish a GitHub Release. When restoring historical
