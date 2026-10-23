@@ -59,8 +59,8 @@ final class LoginItemSetupController: NSObject, NSWindowDelegate {
         let copy = L10n(language: language)
         let status = LaunchAtLoginService.currentStatus()
         statusChanged(status)
-        LaunchAtLoginService.openSettings()
         guard !status.isEnabled else { return }
+        LaunchAtLoginService.openSettings()
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: 300, height: 250),

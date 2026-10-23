@@ -1955,16 +1955,7 @@ final class MonitorStore: ObservableObject {
             logger.error("Could not update launch-at-login setting; enabled=\(enabled, privacy: .public), error=\(error.localizedDescription, privacy: .public)")
             if enabled {
                 openLaunchAtLoginSettings()
-                return
-            }
-            let copy = L10n(language: settings.language)
-            let alert = NSAlert()
-            alert.alertStyle = .warning
-            alert.messageText = copy.launchAtLogin
-            alert.informativeText = copy.launchAtLoginManualDisableMessage
-            alert.addButton(withTitle: copy.openLoginItems)
-            alert.addButton(withTitle: copy.cancel)
-            if alert.runModal() == .alertFirstButtonReturn {
+            } else {
                 LaunchAtLoginService.openSettings()
             }
         }
@@ -1979,7 +1970,7 @@ final class MonitorStore: ObservableObject {
         }
     }
 
-    func openLaunchAtLoginSettings() {
+    private func openLaunchAtLoginSettings() {
         loginItemSetup.show(language: settings.language) { [weak self] status in
             self?.launchAtLoginStatus = status
         }

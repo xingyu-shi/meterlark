@@ -278,11 +278,6 @@ struct MonitorPopover: View {
                 )) {
                     Label(launchAtLoginLabel, systemImage: "power")
                 }
-                Button {
-                    store.openLaunchAtLoginSettings()
-                } label: {
-                    Label(copy.openLoginItems, systemImage: "arrow.up.forward.app")
-                }
             }
 
             Section(copy.usageSettings) {

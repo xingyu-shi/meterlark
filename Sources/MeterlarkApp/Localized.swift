@@ -740,12 +740,6 @@ struct L10n: Sendable {
         )
     }
     var openLoginItems: String { text("Open Login Items", "打开登录项") }
-    var launchAtLoginManualDisableMessage: String {
-        text(
-            "Open Login Items, select Meterlark under Open at Login, then click the − button to remove it.",
-            "打开“登录项”设置，在“登录时打开”中选中 Meterlark，然后点击 − 移除。"
-        )
-    }
     var refreshSettings: String { text("Refresh", "刷新") }
     var displaySettings: String { text("Display", "显示") }
     var interfaceTextSize: String { text("Interface text size", "界面字号") }
