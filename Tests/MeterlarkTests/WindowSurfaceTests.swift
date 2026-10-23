@@ -43,13 +43,18 @@ final class WindowSurfaceTests: XCTestCase {
         XCTAssertEqual(window.backgroundColor.alphaComponent, 1)
     }
 
-    func testPopoverWindowSizerShrinksOversizedHostWindowKeepingTopEdge() {
+    func testPopoverWindowSizerShrinksOversizedHostWindowKeepingTopEdge() throws {
         _ = NSApplication.shared
-        let frame = NSRect(x: 200, y: 20, width: 390, height: 1034)
+        // Stay inside the visible frame: AppKit moves windows that cross the
+        // menu bar, and CI runners have small screens.
+        let visible = try XCTUnwrap(NSScreen.main?.visibleFrame)
+        let frame = NSRect(x: visible.minX + 20, y: visible.minY, width: 390, height: visible.height)
+        let fittedHeight = (frame.height / 2).rounded()
         let window = NSWindow(contentRect: frame, styleMask: [.borderless], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
         let host = NSHostingView(rootView: Color.clear
-            .frame(width: 390, height: 600)
-            .background(PopoverWindowSizer(windowHeight: 600) { _ in }))
+            .frame(width: 390, height: fittedHeight)
+            .background(PopoverWindowSizer(windowHeight: Double(fittedHeight)) { _ in }))
         // Like the MenuBarExtra host, the hosting view does not size the window.
         host.sizingOptions = []
         window.contentView = host
@@ -58,10 +63,10 @@ final class WindowSurfaceTests: XCTestCase {
         defer { window.close() }
 
         let deadline = Date().addingTimeInterval(3)
-        while Date() < deadline, abs(window.frame.height - 600) > 0.5 {
+        while Date() < deadline, abs(window.frame.height - fittedHeight) > 0.5 {
             RunLoop.main.run(until: Date().addingTimeInterval(0.05))
         }
-        XCTAssertEqual(window.frame.height, 600, accuracy: 0.5)
+        XCTAssertEqual(window.frame.height, fittedHeight, accuracy: 0.5)
         XCTAssertEqual(window.frame.maxY, frame.maxY, accuracy: 0.5)
         XCTAssertEqual(window.frame.width, 390, accuracy: 0.5)
     }
