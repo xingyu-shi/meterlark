@@ -7,6 +7,17 @@ releases in this repository. Historical provider integrations are summarized
 without organization-specific names or deployment details, and may no longer be
 included in Meterlark.
 
+## 1.2.11 · 2026-10-23
+
+### Fixed
+
+- Restore the expected menu-bar panel appearance in signed downloads by building with macOS SDK 27 instead of SDK 15.5.
+
+### Changed
+
+- Use the Xcode 27 runner for CI and release builds, and reject packaging with a macOS SDK older than 27 before compiling.
+- Preserve Developer ID signing, Apple notarization, and stapling in the release workflow. The app's runtime minimum remains macOS 14.
+
 ## 1.2.10 · 2026-10-23
 
 ### Improved

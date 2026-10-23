@@ -117,9 +117,9 @@ This source revision bundles `ccusage 20.0.32` and recognizes these local harnes
 
 ### Distribution
 
-Download [Meterlark 1.2.10 for Apple Silicon](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.10/Meterlark-1.2.10-arm64.zip),
+Download [Meterlark 1.2.11 for Apple Silicon](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.11/Meterlark-1.2.11-arm64.zip),
 unzip it, and move **Meterlark.app** to **Applications** (or `~/Applications`).
-The release includes a [SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.10/Meterlark-1.2.10-arm64.zip.sha256).
+The release includes a [SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.11/Meterlark-1.2.11-arm64.zip.sha256).
 See [all releases](https://github.com/xingyu-shi/meterlark/releases) and the
 [version history](CHANGELOG.md) for changes.
 
@@ -135,7 +135,7 @@ macOS asks for confirmation.
 
 - macOS 14 or newer
 - Apple Silicon Mac for the current build
-- Xcode Command Line Tools with Swift 5.9 or newer for a source build
+- Xcode 27 or newer with macOS SDK 27 or newer for source builds and packaging; the app still runs on macOS 14 or newer
 - The packaged app includes its native reporting engine and needs no Node.js runtime.
 
 For a source build, the pinned native binary is included at `Resources/ccusage`:

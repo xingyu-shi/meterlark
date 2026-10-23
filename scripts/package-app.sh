@@ -12,6 +12,12 @@ mkdir -p "$CLANG_MODULE_CACHE_PATH"
 # SDK version, changing AppKit/SwiftUI behavior (swift-package-manager#10696).
 SDK_PATH="$(xcrun --sdk macosx --show-sdk-path)"
 SDK_VERSION="$(xcrun --sdk macosx --show-sdk-version)"
+# Keep the SDK baseline of the last verified appearance. A correctly stamped
+# older SDK still selects compatibility UI behavior on newer macOS versions.
+if (( ${SDK_VERSION%%.*} < 27 )); then
+    print -u2 "Packaging requires macOS SDK 27 or newer (Xcode 27+); selected SDK is $SDK_VERSION"
+    exit 1
+fi
 BUILD_ARGS=(-c release --disable-sandbox --build-system native --sdk "$SDK_PATH")
 swift build "${BUILD_ARGS[@]}"
 

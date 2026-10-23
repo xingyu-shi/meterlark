@@ -15,12 +15,16 @@ Before publishing source or an app archive:
    [Gitleaks](https://github.com/gitleaks/gitleaks). A clean current tree does
    not establish that its history is clean. Investigate scanner findings
    without printing candidate secrets.
-4. Run `swift test -c release --build-system native`, then `./scripts/package-app.sh`. The package script
+4. Use Xcode 27 or newer with macOS SDK 27 or newer, matching the `xcode-27`
+   CI and release runner. This is a build requirement; the app still runs on
+   macOS 14 or newer. Run `swift test -c release --build-system native`, then `./scripts/package-app.sh`. The package script
    recreates its app bundle, validates the pinned reporting engine, checks
    signing and architecture, verifies the linked SDK version, and checks the ZIP archive.
    It uses the native build engine to avoid
    [SwiftPM's incorrect SDK stamp](https://github.com/swiftlang/swift-package-manager/issues/10696),
    which can change AppKit and SwiftUI behavior even when the source is unchanged.
+   It also rejects SDKs older than 27: matching the selected SDK alone does
+   not prevent an older toolchain from enabling compatibility appearance.
 5. Inspect the archive for unintended plugins, local configuration, logs,
    credentials, personal metadata, and build paths. Examples use reserved
    domains and are distributed only as source templates.
