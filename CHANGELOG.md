@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed
+
+- Keep plugin configuration forms isolated when switching plugins or reopening the editor.
+- Publish completed usage scans during continuous source activity while scheduling later changes for the next refresh.
+- Reject out-of-range integer progress values without crashing the app.
+- Cancel plugin pipe reads and writes on timeout, including when a descendant holds the output pipe open.
+- Apply OAuth grant defaults when JSON fields are omitted, while preserving explicit null values.
+- Watch Codex sessions in a custom `CODEX_HOME` directory.
+
 ### Added
 
 - Edit Dashboard components directly in the preview: drag anywhere on a component to reorder it live, with animated movement and a placeholder, or use the move and remove controls. Preview and settings share one draft; save applies it to the main Dashboard.

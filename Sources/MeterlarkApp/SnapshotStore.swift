@@ -67,10 +67,17 @@ enum SourceFingerprintReader {
         sourceRoots(home: home).compactMap(read(root:))
     }
 
-    static func sourceRoots(home: URL) -> [URL] {
+    static func sourceRoots(
+        home: URL,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> [URL] {
+        let codexHome = environment["CODEX_HOME"].flatMap { path -> URL? in
+            guard !path.isEmpty else { return nil }
+            return URL(fileURLWithPath: NSString(string: path).expandingTildeInPath, isDirectory: true)
+        } ?? home.appendingPathComponent(".codex", isDirectory: true)
         var roots: [URL] = [
             home.appendingPathComponent(".claude/projects", isDirectory: true),
-            home.appendingPathComponent(".codex/sessions", isDirectory: true),
+            codexHome.appendingPathComponent("sessions", isDirectory: true),
             home.appendingPathComponent(".amp", isDirectory: true),
             home.appendingPathComponent(".droid", isDirectory: true),
             home.appendingPathComponent(".codebuff", isDirectory: true),
@@ -90,7 +97,6 @@ enum SourceFingerprintReader {
             home.appendingPathComponent("Library/Application Support/goose/sessions", isDirectory: true)
         ]
 
-        let environment = ProcessInfo.processInfo.environment
         for key in ["AMP_DATA_DIR", "DROID_SESSIONS_DIR", "GEMINI_DATA_DIR", "KIMI_DATA_DIR", "COPILOT_OTEL_FILE_EXPORTER_PATH"] {
             if let value = environment[key], !value.isEmpty {
                 roots.append(URL(fileURLWithPath: NSString(string: value).expandingTildeInPath))

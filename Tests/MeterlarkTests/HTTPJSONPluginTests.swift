@@ -3,6 +3,69 @@ import XCTest
 @testable import MeterlarkApp
 
 final class HTTPJSONPluginTests: XCTestCase {
+    func testOAuthGrantDefaultsApplyWhenFieldsAreOmitted() throws {
+        var object = try XCTUnwrap(
+            try JSONSerialization.jsonObject(with: JSONEncoder().encode(standardOAuthManifest())) as? [String: Any]
+        )
+        var http = try XCTUnwrap(object["http"] as? [String: Any])
+        var auth = try XCTUnwrap(http["auth"] as? [String: Any])
+        auth.removeValue(forKey: "grantTypeParameter")
+        auth.removeValue(forKey: "grantTypeValue")
+        http["auth"] = auth
+        object["http"] = http
+
+        let manifest = try JSONDecoder().decode(
+            PluginManifest.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertNoThrow(try manifest.validate())
+        XCTAssertEqual(manifest.http?.auth?.grantTypeParameter, "grant_type")
+        XCTAssertEqual(manifest.http?.auth?.grantTypeValue, "refresh_token")
+
+        // An explicit null disables the grant parameter; it is not omission.
+        auth["grantTypeParameter"] = NSNull()
+        auth["grantTypeValue"] = NSNull()
+        http["auth"] = auth
+        object["http"] = http
+        let withoutGrant = try JSONDecoder().decode(
+            PluginManifest.self,
+            from: JSONSerialization.data(withJSONObject: object)
+        )
+        XCTAssertNoThrow(try withoutGrant.validate())
+        XCTAssertNil(withoutGrant.http?.auth?.grantTypeParameter)
+        XCTAssertNil(withoutGrant.http?.auth?.grantTypeValue)
+    }
+
+    func testIntegerProgressMappingRejectsOutOfRangeResponseValues() throws {
+        let template = try JSONDecoder().decode(PluginProgressItemTemplate.self, from: Data(#"""
+        {
+          "type":"progress", "id":"quota", "label":{"literal":"Quota"},
+          "current":{"path":"/used"}, "maximum":{"path":"/limit"},
+          "valueFormat":"integer",
+          "statusRule":{
+            "condition":{"leftPath":"/used","operator":"greaterThanOrEqual","rightPath":"/limit"},
+            "whenTrue":{"kind":"alert","text":{"literal":"Reached"}},
+            "whenFalse":{"kind":"normal","text":{"literal":"Available"}}
+          }
+        }
+        """#.utf8))
+        try template.validate(path: "progress")
+        for response in [
+            #"{"used":9223372036854775807,"limit":100}"#,
+            #"{"used":1,"limit":9223372036854775807}"#,
+            #"{"used":1e100,"limit":100}"#
+        ] {
+            let root = try JSONDecoder().decode(PluginJSONValue.self, from: Data(response.utf8))
+            XCTAssertThrowsError(try template.makePayload(in: root)) { error in
+                XCTAssertEqual(error as? PluginHTTPJSONSchemaError, .invalid("progress.integer"))
+            }
+        }
+        XCTAssertEqual(
+            try PluginHTTPJSONDisplayFormatter.pair(current: 3.75, maximum: 100.9, format: .integer),
+            "3 / 100"
+        )
+    }
+
     func testExampleGatewayManifestIsManifestOnlyAndUsesTheHostContract() throws {
         let manifest = try loadExampleGatewayManifest()
 

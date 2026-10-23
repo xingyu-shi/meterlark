@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import XCTest
 @testable import MeterlarkApp
 
@@ -255,6 +256,72 @@ final class ExternalPluginTransportTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? ExternalPluginTransportError, .outputTooLarge)
         }
+    }
+
+    func testTimeoutDoesNotWaitForADescendantHoldingStdout() async throws {
+        for parentExits in [false, true] {
+            let package = try makePackage(executableContents: """
+            #!/bin/sh
+            IFS= read -r request
+            trap '' TERM
+            /bin/sleep 5 &
+            echo "$!" > child.pid
+            \(parentExits ? "exit 0" : "wait")
+            """)
+            defer {
+                if let pidText = try? String(contentsOf: package.root.appendingPathComponent("child.pid")),
+                   let pid = Int32(pidText.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                    _ = Darwin.kill(pid, SIGKILL)
+                }
+                try? FileManager.default.removeItem(at: package.root)
+            }
+            let provider = try StdioJSONPluginProvider(
+                manifest: package.manifest,
+                packageURL: package.root,
+                timeout: 0.2
+            )
+            let started = Date()
+            do {
+                _ = try await provider.fetchDashboard()
+                XCTFail("Expected a timeout")
+            } catch {
+                XCTAssertEqual(error as? ExternalPluginTransportError, .timeout)
+            }
+            XCTAssertLessThan(Date().timeIntervalSince(started), 2, "a descendant must not hold the refresh slot")
+        }
+    }
+
+    func testCancellationInterruptsABlockedRequestWrite() async throws {
+        let package = try makePackage(executableContents: """
+        #!/bin/sh
+        echo ready > started
+        exec /bin/sleep 5
+        """)
+        defer { try? FileManager.default.removeItem(at: package.root) }
+        let task = Task {
+            try await SystemExternalPluginProcessRunner().run(
+                executableURL: package.executable,
+                packageURL: package.root,
+                request: Data(repeating: 0x20, count: ExternalPluginTransport.maximumRequestBytes),
+                timeout: 5,
+                maximumOutputBytes: 1024
+            )
+        }
+        let deadline = Date().addingTimeInterval(2)
+        while !FileManager.default.fileExists(atPath: package.root.appendingPathComponent("started").path),
+              Date() < deadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: package.root.appendingPathComponent("started").path))
+        let cancelledAt = Date()
+        task.cancel()
+        do {
+            _ = try await task.value
+            XCTFail("Expected cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertLessThan(Date().timeIntervalSince(cancelledAt), 2)
     }
 
     private struct PackageFixture {

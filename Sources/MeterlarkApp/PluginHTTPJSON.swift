@@ -224,13 +224,13 @@ struct PluginHTTPJSONAuthDefinition: Codable, Equatable, Sendable {
         encoding = try container.decode(PluginHTTPRefreshEncoding.self, forKey: .encoding)
         refreshTokenParameter = try container.decodeIfPresent(String.self, forKey: .refreshTokenParameter)
             ?? "refresh_token"
-        if try container.decodeNil(forKey: .grantTypeParameter) {
+        if container.contains(.grantTypeParameter), try container.decodeNil(forKey: .grantTypeParameter) {
             grantTypeParameter = nil
         } else {
             grantTypeParameter = try container.decodeIfPresent(String.self, forKey: .grantTypeParameter)
                 ?? "grant_type"
         }
-        if try container.decodeNil(forKey: .grantTypeValue) {
+        if container.contains(.grantTypeValue), try container.decodeNil(forKey: .grantTypeValue) {
             grantTypeValue = nil
         } else {
             grantTypeValue = try container.decodeIfPresent(String.self, forKey: .grantTypeValue)
@@ -1081,7 +1081,7 @@ struct PluginProgressItemTemplate: Codable, Equatable, Sendable {
         guard status.kind == .normal || status.kind == .alert else {
             throw PluginHTTPJSONSchemaError.invalid("progress item \(id) status")
         }
-        let valueText = PluginHTTPJSONDisplayFormatter.pair(
+        let valueText = try PluginHTTPJSONDisplayFormatter.pair(
             current: currentValue,
             maximum: maximumValue,
             format: valueFormat
@@ -1375,10 +1375,14 @@ enum PluginHTTPJSONDisplayFormatter {
 
     static func currency(_ value: Double) -> String { "$" + decimal(value) }
 
-    static func pair(current: Double, maximum: Double, format: PluginBindingFormat) -> String {
+    static func pair(current: Double, maximum: Double, format: PluginBindingFormat) throws -> String {
         switch format {
         case .integer:
-            return "\(integer(Int64(current))) / \(integer(Int64(maximum)))"
+            guard let current = Int64(exactly: current.rounded(.towardZero)),
+                  let maximum = Int64(exactly: maximum.rounded(.towardZero)) else {
+                throw PluginHTTPJSONSchemaError.invalid("progress.integer")
+            }
+            return "\(integer(current)) / \(integer(maximum))"
         case .decimal:
             return "\(decimal(current)) / \(decimal(maximum))"
         case .currency, .text:

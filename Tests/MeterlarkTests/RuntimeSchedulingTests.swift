@@ -332,6 +332,32 @@ final class RuntimeSchedulingTests: XCTestCase {
         waitForRefreshCompletion(store)
     }
 
+    func testContinuousSourceChangesPublishEachCompletedScanAndRemainDirty() throws {
+        let clock = TestClock()
+        let scope = CCUsageRunner.queryScope(for: 30, now: clock.now)
+        let candidates = (1...3).map { makeScopedSnapshot(scope: scope, cost: Double($0)) }
+        let runner = BlockingEveryUsageRunner(snapshots: candidates)
+        let store = try makeStore(
+            clock: clock,
+            interval: 60,
+            watchers: [StubSourceChangeWatcher(isRunning: true)],
+            runner: runner
+        )
+
+        for expected in candidates {
+            clock.now = clock.now.addingTimeInterval(61)
+            store.periodicCheckForTesting(now: clock.now)
+            XCTAssertEqual(runner.started.wait(timeout: .now() + 2), .success)
+            store.markDirty()
+            runner.release.signal()
+            waitForRefreshCompletion(store)
+
+            XCTAssertEqual(store.snapshot.estimatedCost, expected.estimatedCost)
+            XCTAssertTrue(store.isDirty, "events arriving during the scan still need a later refresh")
+            XCTAssertFalse(store.refreshInFlightForTesting, "the next scan must respect the refresh interval")
+        }
+    }
+
     func testSourceChangeDuringUsageRefreshDefersReplacementUntilThrottleAndSettle() throws {
         let clock = TestClock()
         let watcher = StubSourceChangeWatcher(isRunning: true)
@@ -351,7 +377,7 @@ final class RuntimeSchedulingTests: XCTestCase {
         waitForRefreshCompletion(store)
 
         XCTAssertEqual(runner.callCount, 1, "a source change must not immediately start a replacement scan")
-        XCTAssertTrue(store.isDirty, "the stale in-flight result must leave the source dirty")
+        XCTAssertTrue(store.isDirty, "events after the scan started must leave the source dirty")
 
         clock.now = clock.now.addingTimeInterval(299)
         store.periodicCheckForTesting(now: clock.now)
@@ -2526,6 +2552,25 @@ private final class StubRunner: CCUsageRunnerProtocol {
 
     func run(settings: MonitorSettings, mode: CCUsageRunMode, previousPricingDate: Date?) throws -> UsageSnapshot {
         XCTAssertEqual(settings, self.settings)
+        return snapshot
+    }
+}
+
+private final class BlockingEveryUsageRunner: @unchecked Sendable, CCUsageRunnerProtocol {
+    let started = DispatchSemaphore(value: 0)
+    let release = DispatchSemaphore(value: 0)
+    private let snapshots: [UsageSnapshot]
+    private var calls = 0
+
+    init(snapshots: [UsageSnapshot]) {
+        self.snapshots = snapshots
+    }
+
+    func run(settings: MonitorSettings, mode: CCUsageRunMode, previousPricingDate: Date?) throws -> UsageSnapshot {
+        let snapshot = snapshots[min(calls, snapshots.count - 1)]
+        calls += 1
+        started.signal()
+        _ = release.wait(timeout: .now() + 2)
         return snapshot
     }
 }

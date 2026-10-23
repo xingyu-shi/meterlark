@@ -16,6 +16,7 @@ enum ExternalPluginTransportError: Error, Equatable, Sendable {
     case requestTooLarge
     case processLaunch
     case stdinWrite
+    case stdoutRead
     case timeout
     case outputTooLarge
     case nonZeroExit(Int32)
@@ -38,6 +39,8 @@ extension ExternalPluginTransportError: LocalizedError {
             return "The plugin process could not be launched."
         case .stdinWrite:
             return "The plugin request could not be written."
+        case .stdoutRead:
+            return "The plugin response could not be read."
         case .timeout:
             return "The plugin did not respond before the refresh timeout."
         case .outputTooLarge:
@@ -207,7 +210,7 @@ struct SystemExternalPluginProcessRunner: ExternalPluginProcessRunner {
         return try await withTaskCancellationHandler {
             try await withThrowingTaskGroup(of: ExternalPluginProcessResult.self) { group in
                 group.addTask {
-                    try controller.execute()
+                    try await controller.execute()
                 }
                 group.addTask {
                     let nanoseconds = UInt64(max(timeout, 0.001) * 1_000_000_000)
@@ -240,6 +243,8 @@ private final class ExternalPluginProcessController: @unchecked Sendable {
     private let maximumOutputBytes: Int
     private let lock = NSLock()
     private var process: Process?
+    private var processGroupID: pid_t?
+    private var isCancelled = false
 
     init(executableURL: URL, packageURL: URL, request: Data, maximumOutputBytes: Int) {
         self.executableURL = executableURL
@@ -248,7 +253,8 @@ private final class ExternalPluginProcessController: @unchecked Sendable {
         self.maximumOutputBytes = maximumOutputBytes
     }
 
-    func execute() throws -> ExternalPluginProcessResult {
+    func execute() async throws -> ExternalPluginProcessResult {
+        try Task.checkCancellation()
         let process = Process()
         let input = Pipe()
         let output = Pipe()
@@ -259,26 +265,21 @@ private final class ExternalPluginProcessController: @unchecked Sendable {
         process.standardOutput = output
         process.standardError = FileHandle.nullDevice
 
-        lock.lock()
-        self.process = process
-        lock.unlock()
-
-        do {
-            try process.run()
-        } catch {
-            throw ExternalPluginTransportError.processLaunch
+        defer {
+            try? input.fileHandleForWriting.close()
+            try? output.fileHandleForReading.close()
         }
 
         do {
-            try input.fileHandleForWriting.write(contentsOf: request)
+            try launch(process)
+            try makeNonblocking(input.fileHandleForWriting, writing: true)
+            try makeNonblocking(output.fileHandleForReading, writing: false)
+            try await writeRequest(to: input.fileHandleForWriting)
             try input.fileHandleForWriting.close()
-        } catch {
-            terminate()
-            throw ExternalPluginTransportError.stdinWrite
-        }
-
-        do {
-            let stdout = try readLimited(output.fileHandleForReading)
+            let stdout = try await readLimited(output.fileHandleForReading)
+            while process.isRunning {
+                try await Task.sleep(nanoseconds: 20_000_000)
+            }
             process.waitUntilExit()
             return ExternalPluginProcessResult(
                 stdout: stdout,
@@ -292,26 +293,87 @@ private final class ExternalPluginProcessController: @unchecked Sendable {
 
     func terminate() {
         lock.lock()
+        guard !isCancelled else {
+            lock.unlock()
+            return
+        }
+        isCancelled = true
         let process = self.process
+        let processGroupID = self.processGroupID
         lock.unlock()
-        guard let process, process.isRunning else { return }
-        process.terminate()
-        if process.isRunning {
+        // Foundation normally gives a child its own process group. Only kill
+        // a group whose ownership was verified at launch; never target the
+        // host's group. Descendants can hold stdout open after the parent exits.
+        if let processGroupID {
+            _ = Darwin.kill(-processGroupID, SIGKILL)
+        }
+        if let process, process.isRunning {
             _ = Darwin.kill(process.processIdentifier, SIGKILL)
         }
     }
 
-    private func readLimited(_ handle: FileHandle) throws -> Data {
-        var result = Data()
-        while true {
-            let remaining = maximumOutputBytes - result.count
-            let chunkSize = min(64 * 1024, remaining + 1)
-            guard let chunk = try handle.read(upToCount: max(chunkSize, 1)), !chunk.isEmpty else {
-                return result
+    private func launch(_ process: Process) throws {
+        lock.lock()
+        defer { lock.unlock() }
+        guard !isCancelled else { throw CancellationError() }
+        self.process = process
+        do {
+            try process.run()
+        } catch {
+            throw ExternalPluginTransportError.processLaunch
+        }
+        let pid = process.processIdentifier
+        if getpgid(pid) != pid { _ = setpgid(pid, pid) }
+        if getpgid(pid) == pid { processGroupID = pid }
+    }
+
+    private func makeNonblocking(_ handle: FileHandle, writing: Bool) throws {
+        let descriptor = handle.fileDescriptor
+        let flags = fcntl(descriptor, F_GETFL)
+        guard flags >= 0, fcntl(descriptor, F_SETFL, flags | O_NONBLOCK) != -1,
+              !writing || fcntl(descriptor, F_SETNOSIGPIPE, 1) != -1 else {
+            throw writing ? ExternalPluginTransportError.stdinWrite : ExternalPluginTransportError.stdoutRead
+        }
+    }
+
+    private func writeRequest(to handle: FileHandle) async throws {
+        var offset = 0
+        while offset < request.count {
+            try Task.checkCancellation()
+            let count = request.withUnsafeBytes { bytes in
+                Darwin.write(handle.fileDescriptor, bytes.baseAddress!.advanced(by: offset), request.count - offset)
             }
-            result.append(chunk)
-            if result.count > maximumOutputBytes {
-                throw ExternalPluginTransportError.outputTooLarge
+            if count > 0 {
+                offset += count
+            } else if count == -1, errno == EINTR {
+                continue
+            } else if count == -1, errno == EAGAIN || errno == EWOULDBLOCK {
+                try await Task.sleep(nanoseconds: 20_000_000)
+            } else {
+                throw ExternalPluginTransportError.stdinWrite
+            }
+        }
+    }
+
+    private func readLimited(_ handle: FileHandle) async throws -> Data {
+        var result = Data()
+        var buffer = [UInt8](repeating: 0, count: 64 * 1024)
+        while true {
+            try Task.checkCancellation()
+            let count = Darwin.read(handle.fileDescriptor, &buffer, buffer.count)
+            if count > 0 {
+                guard count <= maximumOutputBytes - result.count else {
+                    throw ExternalPluginTransportError.outputTooLarge
+                }
+                result.append(contentsOf: buffer.prefix(count))
+            } else if count == 0 {
+                return result
+            } else if errno == EINTR {
+                continue
+            } else if errno == EAGAIN || errno == EWOULDBLOCK {
+                try await Task.sleep(nanoseconds: 20_000_000)
+            } else {
+                throw ExternalPluginTransportError.stdoutRead
             }
         }
     }

@@ -1238,9 +1238,10 @@ final class MonitorStore: ObservableObject {
         if let existing = pluginConfigurationWindow {
             window = existing
             window.title = copy.pluginConfigurationTitle(record.manifest.localizedDisplayName(for: settings.language))
-            if let hostingView = existing.contentView as? NSHostingView<PluginConfigurationView> {
-                hostingView.rootView = rootView
-            }
+            // Opening an editor starts a fresh session. Replacing only the
+            // root value preserves SwiftUI @State, including another
+            // plugin's unsaved endpoint and secret inputs.
+            existing.contentView = NSHostingView(rootView: rootView)
             pluginConfigurationPluginID = pluginID
         } else {
             window = NSWindow(
@@ -2776,10 +2777,9 @@ final class MonitorStore: ObservableObject {
             currentDate.timeIntervalSince($0) >= Self.sourceSettleInterval
         } ?? true
         // Debounce ordinary bursts, but do not let a never-ending stream of
-        // source events starve usage forever. The generation check in
-        // finishRefresh still discards a result if another event arrives
-        // during the scan; the configured interval bounds how often such a
-        // storm can start another attempt.
+        // source events starve usage forever. A completed scan can publish
+        // while later events remain dirty; the configured interval bounds
+        // how often the next catch-up scan starts.
         let sourceRefreshReady = hasSettled || dirtyWaitHasReachedRefreshInterval
         if isDirty,
            sourceRefreshReady,
@@ -3744,24 +3744,10 @@ final class MonitorStore: ObservableObject {
             _ = drainPendingRefresh()
             return
         }
-        if dirtyGeneration != generationAtStart {
-            clearInFlight(for: intent)
-            phase = .waiting
-            recordRefreshCompletion(intent: intent, started: started, failed: false)
-            if pendingRefreshIntent != nil || pendingForcedUsageRefresh {
-                // Manual refreshes, scope rollovers, and configuration changes
-                // are explicit requests and must retain their immediate
-                // semantics. A plain source change has no queued intent.
-                _ = drainPendingRefresh()
-            } else {
-                // The result is stale, but do not turn a source event during a
-                // scan into an immediate replacement scan. The normal path
-                // enforces both the source settle window and user throttle.
-                pendingUsageRefresh = false
-                periodicCheck()
-            }
-            return
-        }
+        // Source events may continue throughout every scan. Publish a valid
+        // result for the current scope/pricing basis, then leave the source
+        // dirty so the next throttled scan can catch up. Discarding every such
+        // result would prevent an active session from ever appearing.
         guard accepted else {
             logger.warning("Pricing candidate rejected; intent=\(String(describing: intent), privacy: .public), candidateCost=\(snapshot.estimatedCost, privacy: .public), previousCost=\(self.pricingReferenceSnapshot.estimatedCost, privacy: .public), unknownModels=\(snapshot.unknownPricingModels.count, privacy: .public)")
             clearInFlight(for: intent)

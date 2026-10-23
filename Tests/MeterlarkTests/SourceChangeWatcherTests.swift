@@ -3,6 +3,26 @@ import XCTest
 @testable import MeterlarkApp
 
 final class SourceChangeWatcherTests: XCTestCase {
+    func testSourceRootsUseCodexHomeInsteadOfTheDefaultDirectory() {
+        let home = URL(fileURLWithPath: "/tmp/meterlark-test-home", isDirectory: true)
+        let customHome = URL(fileURLWithPath: "/tmp/meterlark-other-codex", isDirectory: true)
+        let roots = SourceFingerprintReader.sourceRoots(
+            home: home,
+            environment: ["CODEX_HOME": customHome.path]
+        )
+        XCTAssertTrue(roots.contains(customHome.appendingPathComponent("sessions", isDirectory: true)))
+        XCTAssertFalse(roots.contains(home.appendingPathComponent(".codex/sessions", isDirectory: true)))
+        XCTAssertTrue(roots.contains(home.appendingPathComponent(".claude/projects", isDirectory: true)))
+    }
+
+    func testSourceRootsFallBackWhenCodexHomeIsMissingOrEmpty() {
+        let home = URL(fileURLWithPath: "/tmp/meterlark-test-home", isDirectory: true)
+        let expected = home.appendingPathComponent(".codex/sessions", isDirectory: true)
+        for environment in [[:], ["CODEX_HOME": ""]] {
+            XCTAssertTrue(SourceFingerprintReader.sourceRoots(home: home, environment: environment).contains(expected))
+        }
+    }
+
     func testFSEventsDeliversCallbackForAppendToExistingFile() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("Meterlark.SourceChangeWatcherTests.\(UUID().uuidString)", isDirectory: true)
