@@ -110,7 +110,10 @@ struct MonitorPopover: View {
         .preferredColorScheme(preferredColorScheme)
         .appInterfaceTextSize(store.settings.interfaceTextSize)
         .environment(\.appSurfaceStyle, store.settings.surfaceStyle)
-        .background(PopoverScreenHeightReader { height in
+        .background(PopoverWindowSizer(
+            // The dashboard layout preview window is resized by its owner.
+            windowHeight: onHeightChange == nil ? resolvedPopoverHeight : nil
+        ) { height in
             if maximumVisibleHeight != height {
                 maximumVisibleHeight = height
             }

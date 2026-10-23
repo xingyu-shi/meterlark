@@ -20,21 +20,29 @@ struct MetricTile: View {
     let model: MetricTileModel
 
     var body: some View {
+        // Narrow columns shrink text onto one line instead of wrapping, so
+        // every tile in a row keeps the same height.
         VStack(alignment: .leading, spacing: 5) {
             Text(model.header.text)
                 .appFont(.metadataEmphasis)
                 .foregroundStyle(DashboardComponentColor.muted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Text(model.primary.displayText)
                 .appFont(.metric)
                 .foregroundStyle(DashboardComponentColor.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.45)
                 .dashboardNumericValueTransition(value: model.primary)
             if let detail = model.detail {
                 Text(detail.text)
                     .appFont(.metadata)
                     .foregroundStyle(DashboardComponentColor.subtle)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(11)
         .background(AppSurfacePanelBackground())
         .overlay(Rectangle().stroke(DashboardComponentColor.line, lineWidth: 0.5))
