@@ -31,7 +31,10 @@ Before publishing source or an app archive:
 5. Inspect the archive for unintended plugins, local configuration, logs,
    credentials, personal metadata, and build paths. Examples use reserved
    domains and are distributed only as source templates. Open the DMG in Finder
-   and check its two-icon layout and Applications drop target. The DMG script
+   and check its two-icon layout and Applications drop target. Confirm the
+   Retina background is sharp, instructions are fully visible, and the artwork
+   file is hidden. Keep the artwork canvas and Finder icon coordinates aligned.
+   The DMG script
    mounts the image and verifies the copied app's signature; avoid adding
    FinderInfo metadata to the signed app bundle.
 6. Verify the exact remote revision, its reachable branches and tags, and CI.

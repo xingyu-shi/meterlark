@@ -7,6 +7,13 @@ releases in this repository. Historical provider integrations are summarized
 without organization-specific names or deployment details, and may no longer be
 included in Meterlark.
 
+## 1.2.13 · 2026-10-23
+
+### Improved
+
+- Redesign the drag-to-install window with Meterlark’s signal-lens motif, a warm silver surface, green guidance, and clearer installation instructions.
+- Render installer artwork at standard and Retina resolutions, keeping the app and Applications folder as native Finder drag targets.
+
 ## 1.2.12 · 2026-10-23
 
 ### Added

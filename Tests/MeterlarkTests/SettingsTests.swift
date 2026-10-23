@@ -390,7 +390,7 @@ final class SettingsTests: XCTestCase {
 
         let store = SettingsStore(defaults: defaults)
         var settings = store.load()
-        XCTAssertEqual(settings.menuBarFormat, MenuBarFormat.defaultValue)
+        XCTAssertEqual(settings.menuBarFormat, "[logo]$[cost]")
         settings.menuBarFormat = "[logo] · $[cost:2]"
         store.save(settings)
 

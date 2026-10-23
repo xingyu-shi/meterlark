@@ -26,7 +26,9 @@ if [[ ! -x "$VENV/bin/python" ]]; then
     python3 -m venv "$VENV"
 fi
 "$VENV/bin/python" -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r "$ROOT/scripts/requirements-dmg.txt"
-"$VENV/bin/dmgbuild" -s "$ROOT/scripts/dmg-settings.py" -D "app=$APP" Meterlark "$DMG"
+ARTWORK="$ROOT/.build/dmg-artwork"
+swift -module-cache-path "$ROOT/.build/clang-module-cache" "$ROOT/scripts/dmg-background.swift" "$ARTWORK"
+"$VENV/bin/dmgbuild" -s "$ROOT/scripts/dmg-settings.py" -D "app=$APP" -D "background=$ARTWORK/background.png" Meterlark "$DMG"
 
 # Verify the copied app, not only the input: Finder customization must not
 # alter signed bundle metadata, and the drop target must resolve correctly.
@@ -38,6 +40,10 @@ cleanup() {
 trap cleanup EXIT
 hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$VERIFY_MOUNT" -quiet
 codesign --verify --deep --strict "$VERIFY_MOUNT/Meterlark.app"
+if [[ ! -f "$VERIFY_MOUNT/.background.tiff" || "$(/usr/bin/GetFileInfo -a "$VERIFY_MOUNT/.background.tiff")" != *V* ]]; then
+    print -u2 "DMG installer artwork is missing or not hidden"
+    exit 1
+fi
 if [[ ! -L "$VERIFY_MOUNT/Applications" || "$(readlink "$VERIFY_MOUNT/Applications")" != /Applications ]]; then
     print -u2 "DMG is missing its Applications drop target"
     exit 1
