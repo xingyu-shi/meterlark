@@ -33,3 +33,5 @@ jobs:
         run: swift test -c release --build-system native
       - name: Verify release package and linked SDK
         run: ./scripts/package-app.sh
+      - name: Verify drag-to-install disk image
+        run: ./scripts/package-dmg.sh

@@ -7,6 +7,22 @@ releases in this repository. Historical provider integrations are summarized
 without organization-specific names or deployment details, and may no longer be
 included in Meterlark.
 
+## 1.2.12 · 2026-10-23
+
+### Added
+
+- Add a standard DMG installer that opens with Meterlark and an Applications shortcut, connected by a drag-to-install arrow.
+- Publish a signed, notarized, and stapled DMG alongside the ZIP download, with a SHA-256 checksum for each.
+
+### Fixed
+
+- Resize the menu-bar hosting window when the dashboard becomes shorter, keeping its top edge under the menu bar.
+- Keep summary tile text on one line and tiles in the same row at equal heights.
+
+### Changed
+
+- Check the app signature and Applications shortcut inside the mounted DMG before signing and publishing the installer.
+
 ## 1.2.11 · 2026-10-23
 
 ### Fixed

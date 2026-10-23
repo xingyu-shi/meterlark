@@ -17,7 +17,10 @@ Before publishing source or an app archive:
    without printing candidate secrets.
 4. Use Xcode 27 or newer with macOS SDK 27 or newer, matching the `xcode-27`
    CI and release runner. This is a build requirement; the app still runs on
-   macOS 14 or newer. Run `swift test -c release --build-system native`, then `./scripts/package-app.sh`. The package script
+   macOS 14 or newer. Run `swift test -c release --build-system native`,
+   `./scripts/package-app.sh`, then `./scripts/package-dmg.sh`. DMG creation
+   requires Python 3.10+; its build dependencies are hash-pinned and isolated
+   in `.build/dmg-venv`. The package script
    recreates its app bundle, validates the pinned reporting engine, checks
    signing and architecture, verifies the linked SDK version, and checks the ZIP archive.
    It uses the native build engine to avoid
@@ -27,15 +30,18 @@ Before publishing source or an app archive:
    not prevent an older toolchain from enabling compatibility appearance.
 5. Inspect the archive for unintended plugins, local configuration, logs,
    credentials, personal metadata, and build paths. Examples use reserved
-   domains and are distributed only as source templates.
+   domains and are distributed only as source templates. Open the DMG in Finder
+   and check its two-icon layout and Applications drop target. The DMG script
+   mounts the image and verifies the copied app's signature; avoid adding
+   FinderInfo metadata to the signed app bundle.
 6. Verify the exact remote revision, its reachable branches and tags, and CI.
    Changing repository visibility is a separate publishing decision.
 7. Create a new `v<version>` tag at that reviewed revision and push only that
    tag to `xingyu-shi/meterlark`. Do not push unrelated local tags or branches.
 8. Pushing the tag runs the Release workflow. It tests, signs with the
-   Developer ID certificate, notarizes and staples the app, and creates a
-   draft GitHub Release with the exact versioned ZIP and a SHA-256 checksum
-   file that names that ZIP. Keep the signing secrets in the `release`
+   Developer ID certificate, notarizes and staples both the app and DMG, and
+   creates a draft GitHub Release with the exact versioned DMG and ZIP, each
+   with a SHA-256 checksum file naming its artifact. Keep the signing secrets in the `release`
    environment, limited to `v*` tags with a required reviewer. Replace the
    generated notes with user-facing notes from the
    versioned changelog, then publish the draft.

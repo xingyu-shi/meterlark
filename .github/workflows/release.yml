@@ -83,16 +83,18 @@ jobs:
           echo "Signing as: $identity"
 
       - name: Package, sign and notarize
-        run: ./scripts/package-app.sh
+        run: |
+          ./scripts/package-app.sh
+          ./scripts/package-dmg.sh
 
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          name="Meterlark-$VERSION-arm64.zip"
-          (cd dist && shasum -a 256 "$name" > "$name.sha256")
-          gh release create "v$VERSION" "dist/$name" "dist/$name.sha256" \
+          base="Meterlark-$VERSION-arm64"
+          (cd dist && shasum -a 256 "$base.dmg" > "$base.dmg.sha256" && shasum -a 256 "$base.zip" > "$base.zip.sha256")
+          gh release create "v$VERSION" "dist/$base.dmg" "dist/$base.dmg.sha256" "dist/$base.zip" "dist/$base.zip.sha256" \
             --draft --verify-tag --title "Meterlark $VERSION" --generate-notes
 
       - name: Remove signing material

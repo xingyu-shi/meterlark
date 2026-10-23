@@ -97,22 +97,12 @@ if [[ -n "${APPLE_API_KEY_PATH:-}" ]]; then
 		print -u2 "Notarization requires SIGN_IDENTITY to be a Developer ID identity"
 		exit 1
 	fi
-	NOTARY_ARGS=(--key "$APPLE_API_KEY_PATH" --key-id "$APPLE_API_KEY" --issuer "$APPLE_API_ISSUER")
 	NOTARY_UPLOAD="$ROOT/dist/Meterlark-notary-upload.zip"
+	trap 'rm -f "$NOTARY_UPLOAD"' EXIT
 	ditto -c -k --norsrc --keepParent "$APP" "$NOTARY_UPLOAD"
-	NOTARY_RESULT="$(xcrun notarytool submit "$NOTARY_UPLOAD" "${NOTARY_ARGS[@]}" --wait --output-format json)" || true
+	"$ROOT/scripts/notarize.sh" "$NOTARY_UPLOAD" "$APP"
 	rm -f "$NOTARY_UPLOAD"
-	NOTARY_STATUS="$(print -r -- "$NOTARY_RESULT" | plutil -extract status raw -o - - 2>/dev/null || true)"
-	if [[ "$NOTARY_STATUS" != "Accepted" ]]; then
-		print -u2 "Notarization failed: $NOTARY_RESULT"
-		NOTARY_ID="$(print -r -- "$NOTARY_RESULT" | plutil -extract id raw -o - - 2>/dev/null || true)"
-		if [[ -n "$NOTARY_ID" ]]; then
-			xcrun notarytool log "$NOTARY_ID" "${NOTARY_ARGS[@]}" >&2 || true
-		fi
-		exit 1
-	fi
-	xcrun stapler staple "$APP"
-	xcrun stapler validate "$APP"
+	trap - EXIT
 	spctl --assess --type execute --verbose=2 "$APP"
 fi
 

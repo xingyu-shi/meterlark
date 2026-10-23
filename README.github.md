@@ -117,14 +117,21 @@ This source revision bundles `ccusage 20.0.32` and recognizes these local harnes
 
 ### Distribution
 
-Download [Meterlark 1.2.11 for Apple Silicon](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.11/Meterlark-1.2.11-arm64.zip),
-unzip it, and move **Meterlark.app** to **Applications** (or `~/Applications`).
-The release includes a [SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.11/Meterlark-1.2.11-arm64.zip.sha256).
+Download [Meterlark 1.2.12 for Apple Silicon (DMG)](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.12/Meterlark-1.2.12-arm64.dmg).
+Open the DMG and drag **Meterlark** onto **Applications** in the installer window.
+Eject the disk image, then open Meterlark from Applications.
+
+The release includes a [DMG SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.12/Meterlark-1.2.12-arm64.dmg.sha256).
+A [ZIP download](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.12/Meterlark-1.2.12-arm64.zip)
+is also available for manual installation. Choose one format.
 See [all releases](https://github.com/xingyu-shi/meterlark/releases) and the
 [version history](CHANGELOG.md) for changes.
 
 To build from source, follow the steps below. The packaging script produces
 `dist/Meterlark.app` and a versioned Apple Silicon ZIP in `dist/`.
+To also build the drag-to-install DMG, run `./scripts/package-dmg.sh` afterward.
+DMG creation requires Python 3.10 or newer; pinned build dependencies are
+installed into an isolated `.build/dmg-venv` and are not included in the app.
 
 Release downloads are signed with a Developer ID certificate and notarized by
 Apple, so they open without a Gatekeeper warning. Source builds are ad-hoc
