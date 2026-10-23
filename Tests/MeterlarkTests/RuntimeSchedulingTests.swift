@@ -1821,7 +1821,7 @@ final class RuntimeSchedulingTests: XCTestCase {
         XCTAssertNil(ModelCatalogStore(fileURL: modelCatalogURL).revision)
     }
 
-    func testCatalogProviderGenerationChangeTimesOutOldFetchBeforeStartingReplacement() throws {
+    func testCatalogProviderGenerationChangeAbandonsOldFetchBeforeStartingReplacement() throws {
         let clock = try makeStableMiddayClock()
         let firstProvider = PendingModelCatalogProvider(
             snapshot: makeCatalogSnapshot(
@@ -1852,19 +1852,23 @@ final class RuntimeSchedulingTests: XCTestCase {
             automaticPricingRefresh: true,
             modelCatalogStore: ModelCatalogStore(fileURL: modelCatalogURL),
             baseModelCatalogProviders: [firstProvider],
-            modelCatalogProviderTimeout: 0.05
+            // Far longer than every wait below: the replacement must start
+            // because the host abandons the cancelled fetch, not because the
+            // per-provider deadline expired. A short deadline would also race
+            // the replacement fetch itself on slow CI runners.
+            modelCatalogProviderTimeout: 30
         )
 
         waitForModelCatalogFetch(firstProvider, count: 1)
         store.replaceModelCatalogProvidersForTesting([replacementProvider])
-        let replacementDeadline = Date().addingTimeInterval(1)
+        let replacementDeadline = Date().addingTimeInterval(5)
         while replacementProvider.fetchCountForTesting < 1, Date() < replacementDeadline {
             RunLoop.main.run(until: Date().addingTimeInterval(0.01))
         }
         XCTAssertEqual(
             replacementProvider.fetchCountForTesting,
             1,
-            "the replacement should start after the host deadline even if the old provider ignores cancellation"
+            "the replacement should start without waiting for the old provider, which ignores cancellation"
         )
 
         replacementProvider.release()
