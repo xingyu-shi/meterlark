@@ -12,3 +12,4 @@ dist/
 *.p12
 *.pfx
 .private/
+__pycache__/

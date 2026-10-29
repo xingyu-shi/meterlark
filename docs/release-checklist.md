@@ -46,16 +46,19 @@ already merged into `main`.
    Changing repository visibility is a separate publishing decision.
 7. Create a new `v<version>` tag at that reviewed revision and push only that
    tag to `xingyu-shi/meterlark`. Do not push unrelated local tags or branches.
-8. Pushing the tag runs the Release workflow. It tests, signs with the
+8. Configure the update-signing secret under the [app update procedure](app-updates.md).
+   Pushing the tag runs the Release workflow. It tests, signs with the
    Developer ID certificate, notarizes and staples both the app and DMG, and
    creates a draft GitHub Release with the exact versioned DMG and ZIP, each
-   with a SHA-256 checksum file naming its artifact. Keep the signing secrets in the `release`
+   with a SHA-256 checksum file naming its artifact, and a signed `appcast.xml`.
+   Keep the signing secrets in the `release`
    environment, limited to `v*` tags with a required reviewer. Replace the
    generated notes with user-facing notes from the
    versioned changelog, then publish the draft.
    Verify that the release is published, is marked latest when appropriate,
-   and that its downloadable ZIP matches the local checksum. A pushed commit
-   or tag alone does not publish a GitHub Release. When restoring historical
+   and that its downloadable ZIP matches the local checksum. Verify the signed
+   feed through the stable latest-release download URL. A pushed commit or tag
+   alone does not publish a GitHub Release. When restoring historical
    notes, do not invent old release assets or publish unaudited old refs.
 
 CI runs the source-content check and a checksum-verified Gitleaks build with a

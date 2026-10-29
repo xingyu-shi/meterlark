@@ -4,9 +4,12 @@ import SwiftUI
 @main
 struct MeterlarkApp: App {
     @StateObject private var store: MonitorStore
+    private let updater: AppUpdater
 
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
+        // Start scheduled checks at launch, independently of opening the panel.
+        updater = AppUpdater()
         let externalPlugins = ExternalPluginRegistry()
         // The host starts empty. External packages become providers only
         // after they are installed, configured, and explicitly enabled.
@@ -19,7 +22,7 @@ struct MeterlarkApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MonitorPopover(store: store)
+            MonitorPopover(store: store, appUpdater: updater)
                 .onAppear(perform: store.refreshLaunchAtLoginStatus)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                     store.refreshLaunchAtLoginStatus()

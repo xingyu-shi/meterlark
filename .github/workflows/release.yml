@@ -6,6 +6,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      verify_only:
+        description: 'Validate a signed, notarized build without creating a release'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,14 +40,23 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Check version tag
+        env:
+          VERIFY_ONLY: ${{ inputs.verify_only || false }}
         run: |
           set -euo pipefail
           version="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' Resources/Info.plist)"
-          if [ "$GITHUB_REF_TYPE" != tag ] || [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::Run from tag v$version (got $GITHUB_REF_TYPE $GITHUB_REF_NAME)"
-            exit 1
+          if [ "$VERIFY_ONLY" != true ]; then
+            if [ "$GITHUB_REF_TYPE" != tag ] || [ "$GITHUB_REF_NAME" != "v$version" ]; then
+              echo "::error::Run from tag v$version (got $GITHUB_REF_TYPE $GITHUB_REF_NAME)"
+              exit 1
+            fi
+            git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+              echo "::error::Release tags must point to a commit already merged into main"
+              exit 1
+            }
           fi
           echo "VERSION=$version" >> "$GITHUB_ENV"
 
@@ -53,9 +67,10 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           APPLE_API_PRIVATE_KEY: ${{ secrets.APPLE_API_PRIVATE_KEY }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
           set -euo pipefail
-          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_API_KEY APPLE_API_ISSUER APPLE_API_PRIVATE_KEY; do
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_API_KEY APPLE_API_ISSUER APPLE_API_PRIVATE_KEY SPARKLE_PRIVATE_KEY; do
             test -n "${!name}" || { echo "::error::Missing secret $name in the release environment"; exit 1; }
           done
           keychain="$RUNNER_TEMP/signing.keychain-db"
@@ -73,12 +88,15 @@ jobs:
           test -n "$identity" || { echo "::error::APPLE_CERTIFICATE holds no valid Developer ID Application identity"; exit 1; }
           key_path="$RUNNER_TEMP/AuthKey_$APPLE_API_KEY.p8"
           printf '%s\n' "$APPLE_API_PRIVATE_KEY" > "$key_path"
+          sparkle_key_path="$RUNNER_TEMP/sparkle-private-key"
+          (umask 077; printf '%s\n' "$SPARKLE_PRIVATE_KEY" > "$sparkle_key_path")
           {
             echo "SIGN_IDENTITY=$identity"
             echo "SIGNING_KEYCHAIN=$keychain"
             echo "APPLE_API_KEY=$APPLE_API_KEY"
             echo "APPLE_API_ISSUER=$APPLE_API_ISSUER"
             echo "APPLE_API_KEY_PATH=$key_path"
+            echo "SPARKLE_PRIVATE_KEY_FILE=$sparkle_key_path"
           } >> "$GITHUB_ENV"
           echo "Signing as: $identity"
 
@@ -86,15 +104,17 @@ jobs:
         run: |
           ./scripts/package-app.sh
           ./scripts/package-dmg.sh
+          ./scripts/package-update-feed.sh
 
       - name: Create draft release
+        if: ${{ !inputs.verify_only }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           base="Meterlark-$VERSION-arm64"
           (cd dist && shasum -a 256 "$base.dmg" > "$base.dmg.sha256" && shasum -a 256 "$base.zip" > "$base.zip.sha256")
-          gh release create "v$VERSION" "dist/$base.dmg" "dist/$base.dmg.sha256" "dist/$base.zip" "dist/$base.zip.sha256" \
+          gh release create "v$VERSION" "dist/$base.dmg" "dist/$base.dmg.sha256" "dist/$base.zip" "dist/$base.zip.sha256" "dist/appcast.xml" \
             --draft --verify-tag --title "Meterlark $VERSION" --generate-notes
 
       - name: Remove signing material
@@ -102,3 +122,4 @@ jobs:
         run: |
           if [ -n "${SIGNING_KEYCHAIN:-}" ]; then security delete-keychain "$SIGNING_KEYCHAIN" || true; fi
           rm -f "${APPLE_API_KEY_PATH:-}"
+          rm -f "$RUNNER_TEMP/sparkle-private-key"
