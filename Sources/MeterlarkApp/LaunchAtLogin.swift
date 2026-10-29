@@ -17,11 +17,14 @@ enum LaunchAtLoginOperation: Equatable, Sendable {
 }
 
 enum LaunchAtLoginError: LocalizedError, Equatable {
+    case appOnReadOnlyVolume
     case registrationDidNotStick
     case unregistrationDidNotStick
 
     var errorDescription: String? {
         switch self {
+        case .appOnReadOnlyVolume:
+            return "Move Meterlark to Applications and open that copy before enabling launch at login."
         case .registrationDidNotStick:
             return "macOS did not register the app as a login item."
         case .unregistrationDidNotStick:
@@ -31,8 +34,17 @@ enum LaunchAtLoginError: LocalizedError, Equatable {
 }
 
 enum LaunchAtLoginService {
-    static func currentStatus() -> LaunchAtLoginStatus {
-        switch SMAppService.mainApp.status {
+    private static var isRunningFromReadOnlyVolume: Bool {
+        (try? Bundle.main.bundleURL.resourceValues(forKeys: [.volumeIsReadOnlyKey]).volumeIsReadOnly) == true
+    }
+
+    static func currentStatus(
+        isOnReadOnlyVolume: () -> Bool = { isRunningFromReadOnlyVolume },
+        readSystemStatus: () -> SMAppService.Status = { SMAppService.mainApp.status }
+    ) -> LaunchAtLoginStatus {
+        // Do not hand the installer copy's identity to Service Management.
+        guard !isOnReadOnlyVolume() else { return .notFound }
+        switch readSystemStatus() {
         case .notRegistered:
             return .notRegistered
         case .enabled:
@@ -68,8 +80,14 @@ enum LaunchAtLoginService {
         _ enabled: Bool,
         readStatus: () -> LaunchAtLoginStatus = { currentStatus() },
         register: () throws -> Void = { try SMAppService.mainApp.register() },
-        unregister: () throws -> Void = { try SMAppService.mainApp.unregister() }
+        unregister: () throws -> Void = { try SMAppService.mainApp.unregister() },
+        isOnReadOnlyVolume: () -> Bool = { isRunningFromReadOnlyVolume }
     ) throws -> LaunchAtLoginStatus {
+        // An installer volume may disappear at logout. Refuse read-only
+        // volumes, while still allowing an old entry to be disabled.
+        if enabled, isOnReadOnlyVolume() {
+            throw LaunchAtLoginError.appOnReadOnlyVolume
+        }
         let status = readStatus()
 
         switch operation(for: enabled, status: status) {

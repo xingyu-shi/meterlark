@@ -30,6 +30,55 @@ final class LaunchAtLoginTests: XCTestCase {
         XCTAssertFalse(LaunchAtLoginStatus.notRegistered.isEnabled)
     }
 
+    func testInstallerCannotEnableLoginEvenWhenAnOldEntryIsEnabled() {
+        for status: LaunchAtLoginStatus in [.notRegistered, .notFound, .enabled, .requiresApproval] {
+            XCTAssertThrowsError(try LaunchAtLoginService.setEnabled(
+                true,
+                readStatus: { status },
+                register: { XCTFail("An installer must not be registered") },
+                unregister: { XCTFail("Enabling must not unregister") },
+                isOnReadOnlyVolume: { true }
+            )) { error in
+                XCTAssertEqual(error as? LaunchAtLoginError, .appOnReadOnlyVolume)
+            }
+        }
+    }
+
+    func testInstallerStatusDoesNotQueryTheSystemWithItsBundleIdentity() {
+        let status = LaunchAtLoginService.currentStatus(
+            isOnReadOnlyVolume: { true },
+            readSystemStatus: {
+                XCTFail("The installer must not query Service Management")
+                return .enabled
+            }
+        )
+        XCTAssertEqual(status, .notFound)
+    }
+
+    func testWritableAppReadsTheSystemLoginStatus() {
+        var readCount = 0
+        let status = LaunchAtLoginService.currentStatus(
+            isOnReadOnlyVolume: { false },
+            readSystemStatus: { readCount += 1; return .enabled }
+        )
+        XCTAssertEqual(readCount, 1)
+        XCTAssertEqual(status, .enabled)
+    }
+
+    func testInstallerCanStillDisableAnOldLoginEntry() throws {
+        var status = LaunchAtLoginStatus.enabled
+        var unregistrationCount = 0
+        let result = try LaunchAtLoginService.setEnabled(
+            false,
+            readStatus: { status },
+            register: { XCTFail("Disabling must not register") },
+            unregister: { unregistrationCount += 1; status = .notRegistered },
+            isOnReadOnlyVolume: { true }
+        )
+        XCTAssertEqual(unregistrationCount, 1)
+        XCTAssertEqual(result, .notRegistered)
+    }
+
     func testEnablingRequestsRegistrationOnlyWhenNotRegistered() {
         XCTAssertEqual(
             LaunchAtLoginService.operation(for: true, status: .notRegistered),

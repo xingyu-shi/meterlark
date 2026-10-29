@@ -7,6 +7,12 @@ releases in this repository. Historical provider integrations are summarized
 without organization-specific names or deployment details, and may no longer be
 included in Meterlark.
 
+## Unreleased
+
+### Fixed
+
+- Prevent enabling launch at login from a read-only installer volume, and explain how to install and open the Applications copy first.
+
 ## 1.2.13 · 2026-10-23
 
 ### Improved
