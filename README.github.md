@@ -138,6 +138,18 @@ Apple, so they open without a Gatekeeper warning. Source builds are ad-hoc
 signed; on first launch, Control-click the app in Finder and choose **Open** if
 macOS asks for confirmation.
 
+### App updates
+
+After installing a release with updater support, use **Settings → Check for
+updates…** to download and install updates inside the app. Automatic checks are
+on by default. **Automatically download and install** is optional and installs
+updates when Meterlark quits, or lets you finish with a restart. The menu-bar
+panel also shows when a background check finds an available update.
+
+Version 1.2.13 and earlier require one normal installation to reach the first
+updater-enabled release. See the [update and signing procedure](docs/app-updates.md)
+for how release feeds and update archives are published and verified.
+
 ### Prerequisites
 
 - macOS 14 or newer

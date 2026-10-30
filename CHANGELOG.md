@@ -13,6 +13,10 @@ included in Meterlark.
 
 - Prevent enabling launch at login from a read-only installer volume, and explain how to install and open the Applications copy first.
 
+- Check for app updates from the settings menu and install updates without visiting GitHub.
+- Enable automatic update checks by default, with an optional automatic download and installation setting and a menu-bar panel reminder for available updates.
+- Verify update archives and feeds with Sparkle signing in addition to the app's Apple Developer ID signature and notarization.
+
 ## 1.2.13 · 2026-10-23
 
 ### Improved

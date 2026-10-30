@@ -724,6 +724,20 @@ struct L10n: Sendable {
     var developerDiagnosticsNo: String { text("No", "否") }
     var developerDiagnosticsNotAvailable: String { text("n/a", "无") }
     var generalSettings: String { text("General", "常规") }
+    var appUpdates: String { text("App updates", "应用更新") }
+    var checkForAppUpdates: String { text("Check for updates…", "检查更新…") }
+    var automaticallyCheckForAppUpdates: String { text("Automatically check for updates", "自动检查更新") }
+    var automaticallyInstallAppUpdates: String { text("Automatically download and install", "自动下载并安装") }
+    var automaticAppUpdatesHelp: String {
+        text(
+            "Download updates in the background and install when Meterlark quits. A restart may be offered to finish an update.",
+            "在后台下载更新，并在 Meterlark 退出时安装；也可按提示立即重启完成更新。"
+        )
+    }
+    var updateApp: String { text("Update", "更新") }
+    func appUpdateAvailable(_ version: String) -> String {
+        text("Meterlark \(version) is available", "Meterlark \(version) 可更新")
+    }
     var launchAtLogin: String { text("Launch at login", "开机自动启动") }
     var launchAtLoginNeedsApproval: String { text("approval required", "需要批准") }
     var launchAtLoginInstallMessage: String {

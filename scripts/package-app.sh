@@ -66,20 +66,33 @@ cp "$ROOT/Resources/ccusage" "$APP/Contents/Resources/ccusage"
 chmod 755 "$APP/Contents/Resources/ccusage"
 cp "$ROOT/Resources/THIRD_PARTY_NOTICES.txt" "$APP/Contents/Resources/THIRD_PARTY_NOTICES.txt"
 cp "$ROOT/Resources/Meterlark-mark.png" "$APP/Contents/Resources/Meterlark-mark.png"
-# Ad-hoc signing by default. A Developer ID build signs the nested ccusage
-# executable first with the hardened runtime, because --deep is not suitable
-# for distribution signing.
+source "$ROOT/scripts/sparkle-paths.sh"
+SPARKLE_FRAMEWORK="$APP/Contents/Frameworks/Sparkle.framework"
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$SPARKLE_FRAMEWORK_SOURCE" "$SPARKLE_FRAMEWORK"
+cp "$SPARKLE_ROOT/LICENSE" "$APP/Contents/Resources/Sparkle-LICENSE.txt"
+# Ad-hoc signing by default. Distribution builds sign nested executables and
+# bundles with the hardened runtime before signing their host.
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
-if [[ "$SIGN_IDENTITY" == "-" ]]; then
-	codesign --force --deep --sign - "$APP" >/dev/null
-else
-	SIGN_ARGS=(--force --options runtime --timestamp --sign "$SIGN_IDENTITY")
+SIGN_ARGS=(--force --sign "$SIGN_IDENTITY")
+if [[ "$SIGN_IDENTITY" != "-" ]]; then
+	SIGN_ARGS+=(--options runtime --timestamp)
 	if [[ -n "${SIGNING_KEYCHAIN:-}" ]]; then
 		SIGN_ARGS+=(--keychain "$SIGNING_KEYCHAIN")
 	fi
-	codesign "${SIGN_ARGS[@]}" "$APP/Contents/Resources/ccusage"
-	codesign "${SIGN_ARGS[@]}" "$APP"
 fi
+# Sign nested updater executables and services before their framework and host.
+# Preserve upstream XPC sandbox entitlements while using our signing identity.
+for component in \
+    "$SPARKLE_FRAMEWORK/Versions/Current/Autoupdate" \
+    "$SPARKLE_FRAMEWORK/Versions/Current/Updater.app" \
+    "$SPARKLE_FRAMEWORK/Versions/Current/XPCServices/Downloader.xpc" \
+    "$SPARKLE_FRAMEWORK/Versions/Current/XPCServices/Installer.xpc" \
+    "$SPARKLE_FRAMEWORK"; do
+    codesign "${SIGN_ARGS[@]}" --preserve-metadata=entitlements "$component"
+done
+codesign "${SIGN_ARGS[@]}" "$APP/Contents/Resources/ccusage"
+codesign "${SIGN_ARGS[@]}" "$APP"
 
 for executable in \
 	"$APP/Contents/MacOS/Meterlark" \

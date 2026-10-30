@@ -26,3 +26,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Sparkle 2.10.1
+Repository: https://github.com/sparkle-project/Sparkle
+Licenses: MIT, BSD, and zlib-style notices for bundled components
+The complete upstream license and third-party notices are included in
+Contents/Resources/Sparkle-LICENSE.txt, copied from the checksum-pinned
+Sparkle distribution when the app is packaged.
