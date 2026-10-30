@@ -740,6 +740,12 @@ struct L10n: Sendable {
     }
     var launchAtLogin: String { text("Launch at login", "开机自动启动") }
     var launchAtLoginNeedsApproval: String { text("approval required", "需要批准") }
+    var launchAtLoginInstallMessage: String {
+        text(
+            "Meterlark is running from a read-only volume, such as the installer. Drag it into Applications, open that copy, then enable Launch at login. The installer volume may not be available the next time you log in.",
+            "Meterlark 正在从安装盘等只读磁盘运行。请先将它拖入“应用程序”，打开安装后的副本，再开启“开机自动启动”。下次登录时，安装盘可能尚未挂载。"
+        )
+    }
     var launchAtLoginManualSetupMessage: String {
         text(
             "Drag this Meterlark icon into Open at Login in System Settings. This guide closes when setup is complete.",
