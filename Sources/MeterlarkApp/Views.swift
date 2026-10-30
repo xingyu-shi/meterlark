@@ -28,6 +28,7 @@ struct DashboardPreviewView: View {
 
 struct MonitorPopover: View {
     @ObservedObject var store: MonitorStore
+    let appUpdater: AppUpdater?
     let layoutOverride: DashboardLayout?
     let popoverHeightOverride: Double?
     let showsSettingsMenu: Bool
@@ -44,6 +45,7 @@ struct MonitorPopover: View {
 
     init(
         store: MonitorStore,
+        appUpdater: AppUpdater? = nil,
         layoutOverride: DashboardLayout? = nil,
         popoverHeightOverride: Double? = nil,
         showsSettingsMenu: Bool = true,
@@ -51,6 +53,7 @@ struct MonitorPopover: View {
         onHeightChange: ((Double) -> Void)? = nil
     ) {
         self.store = store
+        self.appUpdater = appUpdater
         self.layoutOverride = layoutOverride
         self.popoverHeightOverride = popoverHeightOverride
         self.showsSettingsMenu = showsSettingsMenu
@@ -72,6 +75,9 @@ struct MonitorPopover: View {
         ScrollView(.vertical, showsIndicators: shouldShowScrollIndicator) {
             VStack(alignment: .leading, spacing: CGFloat(store.settings.interfaceTextSize.sectionSpacing)) {
                 header
+                if let appUpdater {
+                    AppUpdateNotice(updater: appUpdater, copy: copy)
+                }
                 ForEach(store.visibleDashboardComponents(for: layoutOverride)) { component in
                     if let editingDraft {
                         EditableDashboardComponent(component: component, draft: editingDraft, drag: componentDrag, copy: copy) {
@@ -281,6 +287,10 @@ struct MonitorPopover: View {
                 )) {
                     Label(launchAtLoginLabel, systemImage: "power")
                 }
+            }
+
+            if let appUpdater {
+                AppUpdateMenu(updater: appUpdater, copy: copy)
             }
 
             Section(copy.usageSettings) {

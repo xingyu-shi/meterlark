@@ -7,6 +7,14 @@ releases in this repository. Historical provider integrations are summarized
 without organization-specific names or deployment details, and may no longer be
 included in Meterlark.
 
+## Unreleased
+
+### Added
+
+- Check for app updates from the settings menu and install updates without visiting GitHub.
+- Enable automatic update checks by default, with an optional automatic download and installation setting and a menu-bar panel reminder for available updates.
+- Verify update archives and feeds with Sparkle signing in addition to the app's Apple Developer ID signature and notarization.
+
 ## 1.2.13 · 2026-10-23
 
 ### Improved

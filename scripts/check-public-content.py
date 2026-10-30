@@ -12,6 +12,8 @@ from urllib.parse import urlsplit
 PUBLIC_HOSTS = {
     "github.com", "raw.githubusercontent.com", "img.shields.io",
     "www.w3.org", "www.apple.com",
+    "sparkle-project.org",  # Updater integration documentation.
+    "www.andymatuschak.org",  # Official Sparkle XML namespace, not a network request.
 }
 LEGACY_NAME = re.compile(r"ccusage[ _-]?monitor|ccusage-menubar", re.IGNORECASE)
 SECRET_PATTERNS = {
