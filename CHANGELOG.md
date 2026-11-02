@@ -9,6 +9,8 @@ included in Meterlark.
 
 ## Unreleased
 
+## 1.2.15 · 2026-11-02
+
 ### Improved
 
 - Keep the dashboard menu focused on customization, settings, checking for updates, About, and Quit. Move long-term preferences into a dedicated settings window with General, Appearance, Data & pricing, Budgets, Plugins, and Advanced pages.
