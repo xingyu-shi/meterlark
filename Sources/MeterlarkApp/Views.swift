@@ -29,6 +29,7 @@ struct DashboardPreviewView: View {
 struct MonitorPopover: View {
     @ObservedObject var store: MonitorStore
     let appUpdater: AppUpdater?
+    let onOpenSettings: (() -> Void)?
     let layoutOverride: DashboardLayout?
     let popoverHeightOverride: Double?
     let showsSettingsMenu: Bool
@@ -46,6 +47,7 @@ struct MonitorPopover: View {
     init(
         store: MonitorStore,
         appUpdater: AppUpdater? = nil,
+        onOpenSettings: (() -> Void)? = nil,
         layoutOverride: DashboardLayout? = nil,
         popoverHeightOverride: Double? = nil,
         showsSettingsMenu: Bool = true,
@@ -54,6 +56,7 @@ struct MonitorPopover: View {
     ) {
         self.store = store
         self.appUpdater = appUpdater
+        self.onOpenSettings = onOpenSettings
         self.layoutOverride = layoutOverride
         self.popoverHeightOverride = popoverHeightOverride
         self.showsSettingsMenu = showsSettingsMenu
@@ -280,276 +283,29 @@ struct MonitorPopover: View {
 
     private var settingsMenu: some View {
         Menu {
-            Section(copy.generalSettings) {
-                Toggle(isOn: Binding(
-                    get: { store.launchAtLoginEnabled },
-                    set: { store.setLaunchAtLogin($0) }
-                )) {
-                    Label(launchAtLoginLabel, systemImage: "power")
-                }
+            Button(action: store.showDashboardLayoutSettings) {
+                Label(copy.customizeDashboardLayout, systemImage: "rectangle.3.group")
             }
-
+            if let onOpenSettings {
+                Button(action: onOpenSettings) {
+                    Label(copy.settingsCommand, systemImage: "gearshape")
+                }
+                .keyboardShortcut(",", modifiers: .command)
+            }
+            Divider()
             if let appUpdater {
-                AppUpdateMenu(updater: appUpdater, copy: copy)
+                CheckForAppUpdatesButton(updater: appUpdater, copy: copy)
             }
-
-            Section(copy.usageSettings) {
-                Picker(selection: Binding(
-                    get: { store.settings.lookbackDays },
-                    set: { store.setLookbackDays($0) }
-                )) {
-                    ForEach(MonitorSettings.allowedLookbackDays, id: \.self) { days in
-                        Text(lookbackLabel(days)).tag(days)
-                    }
-                } label: {
-                    Label(settingValue(copy.lookback, lookbackLabel(store.settings.lookbackDays)), systemImage: "calendar")
-                }
-                .pickerStyle(.menu)
+            Button(action: store.showAbout) {
+                Label(copy.aboutApp, systemImage: "info.circle")
             }
-
-            Section(copy.refreshSettings) {
-                Picker(selection: Binding(
-                    get: { store.settings.refreshInterval },
-                    set: { store.setRefreshInterval($0) }
-                )) {
-                    ForEach(MonitorSettings.allowedIntervals, id: \.self) { interval in
-                        Text(intervalLabel(interval)).tag(interval)
-                    }
-                } label: {
-                    Label(settingValue(copy.usageRefreshInterval, intervalLabel(store.settings.refreshInterval)), systemImage: "arrow.clockwise")
-                }
-                .pickerStyle(.menu)
-                .help(copy.usageRefreshIntervalHelp)
-                Picker(selection: Binding(
-                    get: { store.settings.sourceVerificationMode },
-                    set: { store.setSourceVerificationMode($0) }
-                )) {
-                    ForEach(SourceVerificationMode.allCases) { mode in
-                        Text(sourceVerificationModeLabel(mode)).tag(mode)
-                    }
-                } label: {
-                    Label(
-                        settingValue(copy.sourceVerificationMode, sourceVerificationModeLabel(store.settings.sourceVerificationMode)),
-                        systemImage: "waveform.path.ecg"
-                    )
-                }
-                .pickerStyle(.menu)
-                .help(copy.sourceVerificationModeHelp)
-                if store.settings.sourceVerificationMode == .periodicFingerprint {
-                    Picker(selection: Binding(
-                        get: { store.settings.fingerprintCheckInterval },
-                        set: { store.setFingerprintCheckInterval($0) }
-                    )) {
-                        ForEach(fingerprintIntervalOptions, id: \.self) { interval in
-                            Text(fingerprintIntervalLabel(interval)).tag(interval)
-                        }
-                    } label: {
-                        Label(
-                            settingValue(copy.fingerprintCheckInterval, fingerprintIntervalLabel(store.settings.fingerprintCheckInterval)),
-                            systemImage: "clock.arrow.2.circlepath"
-                        )
-                    }
-                    .pickerStyle(.menu)
-                    .help(copy.fingerprintCheckIntervalHelp)
-                    Button {
-                        store.showCustomFingerprintIntervalEditor()
-                    } label: {
-                        Label(copy.customFingerprintInterval, systemImage: "slider.horizontal.3")
-                    }
-                    .help(copy.customFingerprintIntervalHelp)
-                }
-            }
-
-            Section(copy.budget) {
-                Button {
-                    store.showBudgetSettings()
-                } label: {
-                    Label(
-                        settingValue(copy.budget, budgetSettingsSummary),
-                        systemImage: "bell.badge"
-                    )
-                }
-            }
-
-            if store.externalPluginManagementAvailable || !store.pluginStates.isEmpty {
-                Section(copy.plugins) {
-                    Button {
-                        store.showPluginSettings()
-                    } label: {
-                        Label(
-                            settingValue(copy.pluginSettings, pluginSettingsSummary),
-                            systemImage: "puzzlepiece.extension"
-                        )
-                    }
-                    Button {
-                        store.refreshPlugins()
-                    } label: {
-                        Label(copy.refreshPlugins, systemImage: "arrow.clockwise")
-                    }
-                }
-            }
-
-            Section(copy.displaySettings) {
-                Button {
-                    store.showDashboardLayoutSettings()
-                } label: {
-                    Label(copy.customizeDashboardLayout, systemImage: "rectangle.3.group")
-                }
-                Button {
-                    store.editMenuBarFormat()
-                } label: {
-                    Label(settingValue(copy.menuBarFormat, store.settings.menuBarFormat), systemImage: "menubar.rectangle")
-                }
-                Picker(selection: Binding(
-                    get: { store.settings.language },
-                    set: { store.setLanguage($0) }
-                )) {
-                    Text(copy.systemLanguage).tag(AppLanguage.system)
-                    Text(copy.englishLanguage).tag(AppLanguage.english)
-                    Text(copy.chineseLanguage).tag(AppLanguage.chinese)
-                } label: {
-                    Label(settingValue(copy.languageLabel, languageLabel), systemImage: "globe")
-                }
-                .pickerStyle(.menu)
-                Menu {
-                    Button {
-                        store.setAppearance(.automatic)
-                    } label: {
-                        Label(copy.automaticAppearance, systemImage: store.settings.appearance == .automatic ? "checkmark" : "circle")
-                    }
-                    Button {
-                        store.setAppearance(.light)
-                    } label: {
-                        Label(copy.lightAppearance, systemImage: store.settings.appearance == .light ? "checkmark" : "circle")
-                    }
-                    Button {
-                        store.setAppearance(.dark)
-                    } label: {
-                        Label(copy.darkAppearance, systemImage: store.settings.appearance == .dark ? "checkmark" : "circle")
-                    }
-                } label: {
-                    Label(settingValue(copy.appearance, appearanceLabel), systemImage: "circle.lefthalf.filled")
-                }
-                Picker(selection: Binding(
-                    get: { store.settings.surfaceStyle },
-                    set: { store.setSurfaceStyle($0) }
-                )) {
-                    Text(copy.solidSurfaceStyle).tag(AppSurfaceStyle.solid)
-                    Text(copy.glassSurfaceStyle).tag(AppSurfaceStyle.glass)
-                } label: {
-                    Label(settingValue(copy.surfaceStyle, surfaceStyleLabel), systemImage: "square.on.square.dashed")
-                }
-                .pickerStyle(.menu)
-                .help(copy.surfaceStyleHelp)
-                Picker(selection: Binding(
-                    get: { store.settings.interfaceTextSize },
-                    set: { store.setInterfaceTextSize($0) }
-                )) {
-                    ForEach(InterfaceTextSize.allCases) { textSize in
-                        Text(copy.interfaceTextSizeLabel(textSize)).tag(textSize)
-                    }
-                } label: {
-                    Label(
-                        settingValue(copy.interfaceTextSize, copy.interfaceTextSizeLabel(store.settings.interfaceTextSize)),
-                        systemImage: "textformat.size"
-                    )
-                }
-                .pickerStyle(.menu)
-                .help(copy.interfaceTextSizeHelp)
-            }
-
-            Section(copy.pricing) {
-                Menu {
-                    Button {
-                        store.importCustomPricing(mode: .merge)
-                    } label: {
-                        Label(copy.importAndMergeCustomPricing, systemImage: "square.and.arrow.down")
-                    }
-                    Button {
-                        store.importCustomPricing(mode: .replace)
-                    } label: {
-                        Label(copy.replaceCustomPricing, systemImage: "arrow.triangle.2.circlepath")
-                    }
-                    Divider()
-                    Button {
-                        store.exportCustomPricing()
-                    } label: {
-                        Label(copy.exportCustomPricing, systemImage: "square.and.arrow.up")
-                    }
-                    .disabled(store.customPricingModelCount == 0)
-                    if !store.settings.customPricingPath.isEmpty {
-                        Button(role: .destructive) {
-                            store.removeCustomPricing()
-                        } label: {
-                            Label(copy.removeCustomPricing, systemImage: "trash")
-                        }
-                    }
-                } label: {
-                    Label(settingValue(copy.customPricing, store.customPricingStatusText), systemImage: "tablecells")
-                }
-                if store.hasCustomPricing || store.hasModelCatalogEntries {
-                    Button {
-                        store.showModelCatalog()
-                    } label: {
-                        Label(copy.searchModels, systemImage: "magnifyingglass")
-                    }
-                }
-                Button {
-                    store.updatePricingNow()
-                } label: {
-                    Label(copy.updatePricing, systemImage: "arrow.triangle.2.circlepath")
-                }
-                Toggle(isOn: Binding(
-                    get: { store.settings.automaticPricingRefresh },
-                    set: { store.settings.automaticPricingRefresh = $0 }
-                )) {
-                    Label(copy.automaticPricing, systemImage: "tag")
-                }
-                Toggle(isOn: Binding(
-                    get: { store.settings.notificationFeedEnabled },
-                    set: { store.settings.notificationFeedEnabled = $0 }
-                )) {
-                    Label(copy.notificationFeedEnabled, systemImage: "bell.badge")
-                }
-            }
-
-            Section(copy.developerSettings) {
-                Toggle(isOn: Binding(
-                    get: { store.settings.developerMode },
-                    set: { store.setDeveloperMode($0) }
-                )) {
-                    Label(copy.developerMode, systemImage: "stethoscope")
-                }
-                .help(copy.developerModeHelp)
-                if store.settings.developerMode {
-                    Button {
-                        store.showDeveloperDiagnostics()
-                    } label: {
-                        Label(copy.openDeveloperDiagnostics, systemImage: "waveform.path.ecg")
-                    }
-                    Button {
-                        store.publishMockNotificationEvents()
-                    } label: {
-                        Label(copy.generateNotificationTestEvents, systemImage: "bell.badge")
-                    }
-                    .help(copy.generateNotificationTestEventsHelp)
-                }
-            }
-
-            Section(copy.about) {
-                Button {
-                    store.showAbout()
-                } label: {
-                    Label(copy.about, systemImage: "info.circle")
-                }
-            }
-
             Divider()
             Button(role: .destructive) {
                 NSApplication.shared.terminate(nil)
             } label: {
                 Label(copy.quitApp, systemImage: "power")
             }
+            .keyboardShortcut("q", modifiers: .command)
         } label: {
             Image(systemName: "gearshape")
                 .appFont(.bodyEmphasis)
@@ -561,28 +317,31 @@ struct MonitorPopover: View {
         .accessibilityLabel(copy.settingsLabel)
     }
 
-    private var launchAtLoginLabel: String {
-        switch store.launchAtLoginStatus {
-        case .requiresApproval:
-            return "\(copy.launchAtLogin) · \(copy.launchAtLoginNeedsApproval)"
-        case .notRegistered, .notFound, .enabled:
-            return copy.launchAtLogin
+    private var lookbackMenu: some View {
+        Menu {
+            Picker(copy.lookback, selection: Binding(
+                get: { store.settings.lookbackDays },
+                set: store.setLookbackDays
+            )) {
+                ForEach(MonitorSettings.allowedLookbackDays, id: \.self) { days in
+                    Text(lookbackLabel(days)).tag(days)
+                }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            HStack(spacing: 4) {
+                Text(lookbackLabel(store.settings.lookbackDays))
+                Image(systemName: "chevron.down")
+                    .appFont(.chartControlChevron)
+            }
+            .appFont(.metadataEmphasis)
+            .foregroundStyle(Color.muted)
         }
-    }
-
-    private var appearanceLabel: String {
-        switch store.settings.appearance {
-        case .automatic: return copy.automaticAppearance
-        case .light: return copy.lightAppearance
-        case .dark: return copy.darkAppearance
-        }
-    }
-
-    private var surfaceStyleLabel: String {
-        switch store.settings.surfaceStyle {
-        case .solid: return copy.solidSurfaceStyle
-        case .glass: return copy.glassSurfaceStyle
-        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(copy.lookback)
+        .accessibilityLabel(copy.lookback)
+        .accessibilityValue(lookbackLabel(store.settings.lookbackDays))
     }
 
     private var dailySection: some View {
@@ -600,9 +359,7 @@ struct MonitorPopover: View {
                 }
                 Spacer()
                 HStack(spacing: 8) {
-                    Text(lookbackLabel(store.settings.lookbackDays))
-                        .appFont(.metadataEmphasis)
-                        .foregroundStyle(Color.muted)
+                    lookbackMenu
                     ChartViewMenu(
                         metric: $chartMetric,
                         grouping: $chartGrouping,
@@ -683,83 +440,12 @@ struct MonitorPopover: View {
         interval >= 60 ? "\(Int(interval / 60)) \(copy.minutes)" : "\(Int(interval)) \(copy.seconds)"
     }
 
-    private var fingerprintIntervalOptions: [TimeInterval] {
-        var options = MonitorSettings.allowedFingerprintIntervals
-        if !options.contains(store.settings.fingerprintCheckInterval) {
-            options.append(store.settings.fingerprintCheckInterval)
-        }
-        return options
-    }
-
-    private func fingerprintIntervalLabel(_ interval: TimeInterval) -> String {
-        if MonitorSettings.allowedFingerprintIntervals.contains(interval) {
-            return intervalLabel(interval)
-        }
-        return "\(copy.customFingerprintInterval) · \(intervalLabel(interval))"
-    }
-
-    private func sourceVerificationModeLabel(_ mode: SourceVerificationMode) -> String {
-        switch mode {
-        case .eventDriven: return copy.eventDrivenVerificationMode
-        case .periodicFingerprint: return copy.periodicFingerprintVerificationMode
-        }
-    }
-
-    private var languageLabel: String {
-        switch store.settings.language {
-        case .system: return copy.systemLanguage
-        case .english: return copy.englishLanguage
-        case .chinese: return copy.chineseLanguage
-        }
-    }
-
-    private func settingValue(_ label: String, _ value: String) -> String {
-        let separator = copy.language == .chinese ? "：" : ": "
-        return label + separator + value
-    }
-
     private func lookbackLabel(_ days: Int) -> String {
         switch days {
         case 1: return copy.today
         case MonitorSettings.calendarMonthLookback: return copy.currentMonth
         default: return "\(days) \(copy.days)"
         }
-    }
-
-    private func budgetLabel(_ limit: Double) -> String {
-        limit > 0 ? Currency.format(limit) : copy.notConfigured
-    }
-
-    private func budgetAlertThresholdLabel(_ threshold: Double) -> String {
-        MonitorSettings.budgetAlertThresholdPercentage(threshold) + "%"
-    }
-
-    private var budgetSettingsSummary: String {
-        "\(budgetLabel(store.settings.dailyCostLimit)) / \(budgetLabel(store.settings.monthlyCostLimit)) · \(budgetAlertThresholdLabel(store.settings.budgetAlertThreshold))"
-    }
-
-    private var pluginSettingsSummary: String {
-        let plugins = store.externalPlugins
-        if plugins.isEmpty {
-            return copy.noExternalPlugins
-        }
-
-        let packageValidCount = plugins.filter(\.isPackageValid).count
-        let activeCount = plugins.filter(\.enabled).count
-        let activeValidCount = plugins.filter { $0.isValid && $0.enabled }.count
-        if activeValidCount == plugins.count {
-            return copy.configured
-        }
-        if activeValidCount > 0 {
-            return copy.externalPluginMixed
-        }
-        if activeCount > 0 || packageValidCount < plugins.count {
-            return copy.externalPluginMixed
-        }
-        if packageValidCount > 0 {
-            return copy.externalPluginNotActive
-        }
-        return copy.externalPluginInvalid
     }
 
 }

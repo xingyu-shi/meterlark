@@ -414,11 +414,9 @@ final class MonitorStore: ObservableObject {
     private let loginItemSetup = LoginItemSetupController()
     private var modelCatalogWindow: NSWindow?
     private let modelCatalogViewState = ModelCatalogViewState()
-    private var budgetSettingsWindow: NSWindow?
     private var developerDiagnosticsWindow: NSWindow?
     private var customPricingPanel: NSOpenPanel?
     private var externalPluginPanel: NSOpenPanel?
-    private var pluginSettingsWindow: NSWindow?
     private var pluginConfigurationWindow: NSWindow?
     private var pluginConfigurationPluginID: String?
     private var dashboardLayoutSettingsWindow: NSWindow?
@@ -1196,7 +1194,6 @@ final class MonitorStore: ObservableObject {
             )
         } catch {
             externalPluginError = error.localizedDescription
-            refreshPluginSettingsWindow()
         }
     }
 
@@ -1212,7 +1209,6 @@ final class MonitorStore: ObservableObject {
             draft = try externalPluginRegistry.loadConfigurationDraft(pluginID: pluginID)
         } catch {
             externalPluginError = error.localizedDescription
-            refreshPluginSettingsWindow()
             return
         }
 
@@ -1482,75 +1478,6 @@ final class MonitorStore: ObservableObject {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    func showBudgetSettings() {
-        let copy = L10n(language: settings.language)
-        let rootView = BudgetSettingsView(
-            store: self,
-            onCancel: { [weak self] in self?.budgetSettingsWindow?.orderOut(nil) },
-            onSave: { [weak self] in self?.budgetSettingsWindow?.orderOut(nil) }
-        )
-        let window: NSWindow
-        if let existing = budgetSettingsWindow {
-            window = existing
-            window.title = copy.budgetSettingsTitle
-        } else {
-            window = NSWindow(
-                contentRect: NSRect(
-                    x: 0,
-                    y: 0,
-                    width: CGFloat(settings.interfaceTextSize.budgetSettingsWidth),
-                    height: CGFloat(settings.interfaceTextSize.budgetSettingsHeight)
-                ),
-                styleMask: [.titled, .closable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = copy.budgetSettingsTitle
-            window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: rootView)
-            window.center()
-            budgetSettingsWindow = window
-        }
-
-        window.setContentSize(NSSize(
-            width: CGFloat(settings.interfaceTextSize.budgetSettingsWidth),
-            height: CGFloat(settings.interfaceTextSize.budgetSettingsHeight)
-        ))
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
-    func showPluginSettings() {
-        let copy = L10n(language: settings.language)
-        let rootView = PluginSettingsView(
-            store: self,
-            onClose: { [weak self] in self?.pluginSettingsWindow?.orderOut(nil) }
-        )
-        let window: NSWindow
-        if let existing = pluginSettingsWindow {
-            window = existing
-            window.title = copy.pluginSettingsTitle
-            if let hostingView = existing.contentView as? NSHostingView<PluginSettingsView> {
-                hostingView.rootView = rootView
-            }
-        } else {
-            window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 520, height: 420),
-                styleMask: [.titled, .closable],
-                backing: .buffered,
-                defer: false
-            )
-            window.title = copy.pluginSettingsTitle
-            window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: rootView)
-            window.center()
-            pluginSettingsWindow = window
-        }
-
-        window.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
     func showModelCatalog() {
         guard !allModelCatalogEntries.isEmpty else { return }
         let copy = L10n(language: settings.language)
@@ -1690,7 +1617,6 @@ final class MonitorStore: ObservableObject {
             didInstallExternalPlugin(installed)
         } catch {
             externalPluginError = error.localizedDescription
-            refreshPluginSettingsWindow()
         }
     }
 
@@ -1861,8 +1787,6 @@ final class MonitorStore: ObservableObject {
     func setLanguage(_ language: AppLanguage) {
         settings.language = language
         pluginHost?.setLanguage(language)
-        refreshBudgetSettingsWindow()
-        refreshPluginSettingsWindow()
         refreshPluginConfigurationWindow()
         refreshDashboardLayoutSettingsWindow()
         refreshDashboardPreviewWindow()
@@ -1879,8 +1803,6 @@ final class MonitorStore: ObservableObject {
                 height: CGFloat(textSize.modelCatalogHeight)
             ))
         }
-        refreshBudgetSettingsWindow()
-        refreshPluginSettingsWindow()
         refreshPluginConfigurationWindow()
         refreshDashboardLayoutSettingsWindow()
         refreshDashboardPreviewWindow()
@@ -1915,8 +1837,6 @@ final class MonitorStore: ObservableObject {
         settings.appearance = appearance
         refreshAboutWindow()
         refreshModelCatalogWindow()
-        refreshBudgetSettingsWindow()
-        refreshPluginSettingsWindow()
         refreshPluginConfigurationWindow()
         refreshDashboardLayoutSettingsWindow()
         refreshDashboardPreviewWindow()
@@ -1928,8 +1848,6 @@ final class MonitorStore: ObservableObject {
         settings.surfaceStyle = surfaceStyle
         refreshAboutWindow()
         refreshModelCatalogWindow()
-        refreshBudgetSettingsWindow()
-        refreshPluginSettingsWindow()
         refreshPluginConfigurationWindow()
         refreshDashboardLayoutSettingsWindow()
         refreshDashboardPreviewWindow()
@@ -2934,7 +2852,6 @@ final class MonitorStore: ObservableObject {
         )
         modelCatalogProviderGeneration += 1
         publishActiveModelCatalogProjection()
-        refreshPluginSettingsWindow()
         refreshPluginConfigurationWindow()
         refreshDashboardLayoutSettingsWindow()
         refreshDashboardPreviewWindow()
@@ -3915,27 +3832,6 @@ final class MonitorStore: ObservableObject {
             width: CGFloat(settings.interfaceTextSize.aboutWindowWidth),
             height: CGFloat(settings.interfaceTextSize.aboutWindowHeight)
         ))
-    }
-
-    private func refreshBudgetSettingsWindow() {
-        guard let window = budgetSettingsWindow else { return }
-        window.title = L10n(language: settings.language).budgetSettingsTitle
-        window.setContentSize(NSSize(
-            width: CGFloat(settings.interfaceTextSize.budgetSettingsWidth),
-            height: CGFloat(settings.interfaceTextSize.budgetSettingsHeight)
-        ))
-    }
-
-    private func refreshPluginSettingsWindow() {
-        guard let window = pluginSettingsWindow else { return }
-        let copy = L10n(language: settings.language)
-        window.title = copy.pluginSettingsTitle
-        if let hostingView = window.contentView as? NSHostingView<PluginSettingsView> {
-            hostingView.rootView = PluginSettingsView(
-                store: self,
-                onClose: { [weak self] in self?.pluginSettingsWindow?.orderOut(nil) }
-            )
-        }
     }
 
     private func refreshPluginConfigurationWindow() {

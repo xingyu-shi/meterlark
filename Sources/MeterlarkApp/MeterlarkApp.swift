@@ -5,6 +5,7 @@ import SwiftUI
 struct MeterlarkApp: App {
     @StateObject private var store: MonitorStore
     private let updater: AppUpdater
+    private let settingsWindow = AppSettingsWindowController()
 
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
@@ -22,7 +23,7 @@ struct MeterlarkApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MonitorPopover(store: store, appUpdater: updater)
+            MonitorPopover(store: store, appUpdater: updater, onOpenSettings: openSettings)
                 .onAppear(perform: store.refreshLaunchAtLoginStatus)
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
                     store.refreshLaunchAtLoginStatus()
@@ -42,5 +43,15 @@ struct MeterlarkApp: App {
             .accessibilityLabel(store.menuBarHelpText)
         }
         .menuBarExtraStyle(.window)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button(L10n(language: store.settings.language).settingsCommand, action: openSettings)
+                    .keyboardShortcut(",", modifiers: .command)
+            }
+        }
+    }
+
+    private func openSettings() {
+        settingsWindow.show(store: store, updater: updater)
     }
 }
