@@ -117,12 +117,12 @@ This source revision bundles `ccusage 20.0.32` and recognizes these local harnes
 
 ### Distribution
 
-Download [Meterlark 1.2.13 for Apple Silicon (DMG)](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.13/Meterlark-1.2.13-arm64.dmg).
+Download [Meterlark 1.2.14 for Apple Silicon (DMG)](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.14/Meterlark-1.2.14-arm64.dmg).
 Open the DMG and drag **Meterlark** onto **Applications** in the installer window.
 Eject the disk image, then open Meterlark from Applications.
 
-The release includes a [DMG SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.13/Meterlark-1.2.13-arm64.dmg.sha256).
-A [ZIP download](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.13/Meterlark-1.2.13-arm64.zip)
+The release includes a [DMG SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.14/Meterlark-1.2.14-arm64.dmg.sha256).
+A [ZIP download](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.14/Meterlark-1.2.14-arm64.zip)
 is also available for manual installation. Choose one format.
 See [all releases](https://github.com/xingyu-shi/meterlark/releases) and the
 [version history](CHANGELOG.md) for changes.
@@ -140,14 +140,14 @@ macOS asks for confirmation.
 
 ### App updates
 
-After installing a release with updater support, use **Settings → Check for
+In Meterlark 1.2.14 or later, use **Settings → Check for
 updates…** to download and install updates inside the app. Automatic checks are
 on by default. **Automatically download and install** is optional and installs
 updates when Meterlark quits, or lets you finish with a restart. The menu-bar
 panel also shows when a background check finds an available update.
 
-Version 1.2.13 and earlier require one normal installation to reach the first
-updater-enabled release. See the [update and signing procedure](docs/app-updates.md)
+Version 1.2.13 and earlier require one normal installation of 1.2.14 or later
+to enable app updates. See the [update and signing procedure](docs/app-updates.md)
 for how release feeds and update archives are published and verified.
 
 ### Prerequisites
