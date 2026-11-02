@@ -1,30 +1,71 @@
 import SwiftUI
 
-struct AppUpdateMenu: View {
+struct CheckForAppUpdatesButton: View {
+    @ObservedObject var updater: AppUpdater
+    let copy: L10n
+
+    var body: some View {
+        Button(action: updater.checkForUpdates) {
+            Label(copy.checkForAppUpdates, systemImage: "arrow.down.circle")
+        }
+        .disabled(!updater.canCheckForUpdates)
+    }
+}
+
+struct AppUpdateSettingsSection: View {
     @ObservedObject var updater: AppUpdater
     let copy: L10n
 
     var body: some View {
         Section(copy.appUpdates) {
-            Button(action: updater.checkForUpdates) {
-                Label(copy.checkForAppUpdates, systemImage: "arrow.down.circle")
+            LabeledContent(copy.settingsCurrentVersion, value: currentVersion)
+            if let version = updater.availableVersion {
+                Text(copy.appUpdateAvailable(version)).foregroundStyle(AppWindowTheme.signal)
             }
-            .disabled(!updater.canCheckForUpdates)
+            LabeledContent(copy.settingsLastUpdateCheck) {
+                if let date = updater.lastUpdateCheckDate {
+                    Text(date, format: .dateTime.month().day().hour().minute().locale(copy.language == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")))
+                } else {
+                    Text(copy.settingsNotChecked)
+                }
+            }
+            CheckForAppUpdatesButton(updater: updater, copy: copy)
 
-            Toggle(copy.automaticallyCheckForAppUpdates, isOn: Binding(
+            Toggle(isOn: Binding(
                 get: { updater.automaticallyChecksForUpdates },
                 set: updater.setAutomaticallyChecksForUpdates
-            ))
+            )) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(copy.automaticallyCheckForAppUpdates)
+                    Text(copy.settingsAutomaticChecksHelp)
+                        .appFont(.caption)
+                        .foregroundStyle(AppWindowTheme.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             .disabled(!updater.isAvailable)
 
-            Toggle(copy.automaticallyInstallAppUpdates, isOn: Binding(
+            Toggle(isOn: Binding(
                 get: { updater.automaticallyDownloadsUpdates },
                 set: updater.setAutomaticallyDownloadsUpdates
-            ))
+            )) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(copy.automaticallyInstallAppUpdates)
+                    Text(copy.automaticAppUpdatesHelp)
+                        .appFont(.caption)
+                        .foregroundStyle(AppWindowTheme.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             .disabled(!updater.allowsAutomaticUpdates)
-            .help(copy.automaticAppUpdatesHelp)
         }
     }
+
+    private var currentVersion: String {
+        guard updater.isAvailable else { return "—" }
+        return Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
+
 }
 
 struct AppUpdateNotice: View {

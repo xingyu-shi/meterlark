@@ -11,6 +11,7 @@ final class AppUpdater: NSObject, ObservableObject, @MainActor SPUStandardUserDr
     @Published private(set) var automaticallyDownloadsUpdates = false
     @Published private(set) var allowsAutomaticUpdates = false
     @Published private(set) var availableVersion: String?
+    @Published private(set) var lastUpdateCheckDate: Date?
 
     private var controller: SPUStandardUpdaterController?
 
@@ -35,6 +36,7 @@ final class AppUpdater: NSObject, ObservableObject, @MainActor SPUStandardUserDr
         updater.publisher(for: \.automaticallyChecksForUpdates).assign(to: &$automaticallyChecksForUpdates)
         updater.publisher(for: \.automaticallyDownloadsUpdates).assign(to: &$automaticallyDownloadsUpdates)
         updater.publisher(for: \.allowsAutomaticUpdates).assign(to: &$allowsAutomaticUpdates)
+        updater.publisher(for: \.lastUpdateCheckDate).assign(to: &$lastUpdateCheckDate)
         controller.startUpdater()
     }
 

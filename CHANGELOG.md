@@ -9,6 +9,11 @@ included in Meterlark.
 
 ## Unreleased
 
+### Improved
+
+- Keep the dashboard menu focused on customization, settings, checking for updates, About, and Quit. Move long-term preferences into a dedicated settings window with General, Appearance, Data & pricing, Budgets, Plugins, and Advanced pages.
+- Change the reporting range directly beside the daily chart. Show software update preferences with version and last-check details, and label daily budgets, monthly budgets, and alert thresholds separately.
+
 ## 1.2.14 · 2026-11-02
 
 ### Added

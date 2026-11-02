@@ -3,15 +3,12 @@ import SwiftUI
 
 struct PluginSettingsView: View {
     @ObservedObject var store: MonitorStore
-    let onClose: () -> Void
     @State private var showingPasteInstaller = false
 
     private var copy: L10n { L10n(language: store.settings.language) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            header
-
             if !store.pluginStates.isEmpty {
                 pluginStatusSection
             }
@@ -20,38 +17,15 @@ struct PluginSettingsView: View {
                 externalPluginSection
             }
 
-            Spacer(minLength: 0)
-
-            HStack {
-                Spacer()
-                Button(copy.done, action: onClose)
-                    .keyboardShortcut(.defaultAction)
+            Button(action: store.refreshPlugins) {
+                Label(copy.refreshPlugins, systemImage: "arrow.clockwise")
             }
+            .disabled(store.pluginStates.isEmpty)
         }
         .padding(22)
-        .frame(minWidth: 480, minHeight: 360)
-        .background(AppSurfaceBackground(style: store.settings.surfaceStyle))
-        .background(WindowAppearanceBridge(
-            appearance: store.settings.appearance,
-            surfaceStyle: store.settings.surfaceStyle
-        ))
-        .preferredColorScheme(preferredColorScheme)
-        .appInterfaceTextSize(store.settings.interfaceTextSize)
-        .environment(\.appSurfaceStyle, store.settings.surfaceStyle)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .sheet(isPresented: $showingPasteInstaller) {
             PastePluginInstallView(store: store)
-        }
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(copy.pluginSettingsTitle)
-                .appFont(.section)
-                .foregroundStyle(AppWindowTheme.primary)
-            Text(copy.pluginSettingsSubtitle)
-                .appFont(.metadata)
-                .foregroundStyle(AppWindowTheme.secondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -173,14 +147,6 @@ struct PluginSettingsView: View {
         .padding(14)
         .background(AppSurfacePanelBackground())
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-    }
-
-    private var preferredColorScheme: ColorScheme? {
-        switch store.settings.appearance {
-        case .automatic: return nil
-        case .light: return .light
-        case .dark: return .dark
-        }
     }
 
     private func statusText(for phase: PluginRuntimePhase) -> String {

@@ -169,18 +169,18 @@ struct L10n: Sendable {
     var chooseCustomPricingMessage: String { text("Select a LiteLLM-style JSON price list.", "选择 LiteLLM 格式的 JSON 价目表。") }
     var customPricingUnavailable: String { text("Invalid price list", "价目表无效") }
     var notConfigured: String { text("Not configured", "未配置") }
-    var budget: String { text("Budgets", "额度") }
-    var dailyBudget: String { text("Daily budget", "每日额度") }
-    var monthlyBudget: String { text("Monthly budget", "每月额度") }
+    var budget: String { text("Budgets", "预算") }
+    var dailyBudget: String { text("Daily budget", "每日预算") }
+    var monthlyBudget: String { text("Monthly budget", "每月预算") }
     var budgetInputMessage: String { text("Enter a USD amount. Leave it empty to disable the alert.", "输入美元金额。留空可关闭告警。") }
     var invalidBudgetMessage: String { text("Enter a finite number greater than or equal to zero.", "请输入大于等于零的有限数字。") }
     var budgetAlertThreshold: String { text("Alert threshold", "告警阈值") }
     var budgetAlertThresholdInputMessage: String { text("Enter a percentage from 1 to 100.", "请输入 1 到 100 之间的百分比。") }
-    var budgetSettingsTitle: String { text("Budget alerts", "额度告警") }
+    var budgetSettingsTitle: String { text("Budget alerts", "预算提醒") }
     var budgetSettingsSubtitle: String {
         text(
             "Set daily and monthly limits, then choose when the alert turns red.",
-            "设置每日和每月额度，并选择何时显示红色告警。"
+            "设置每日和每月预算，并选择何时显示红色提醒。"
         )
     }
     var budgetPreview: String { text("Preview", "预览") }
@@ -404,8 +404,8 @@ struct L10n: Sendable {
     }
     var usageRefreshIntervalHelp: String {
         text(
-            "This is the minimum spacing between usage refreshes after a change is detected. It is not a fixed timer. It also controls watcher-down fallback, plugin refresh cadence, and the maximum dirty wait.",
-            "这是检测到变化后两次用量刷新的最小间隔，不是固定的定时刷新；它也会影响 watcher 失效时的 fallback、插件刷新节奏和待刷新最长等待时间。"
+            "Refresh after usage changes, no more often than this interval. Also controls automatic plugin refreshes.",
+            "检测到用量变化后刷新，两次刷新至少间隔所选时间。也适用于插件的自动刷新。"
         )
     }
     var fingerprintCheckInterval: String { text("Periodic check interval", "定期检查间隔") }
@@ -514,11 +514,29 @@ struct L10n: Sendable {
     var unknown: String { text("Unknown", "未知") }
     var chartView: String { text("Chart view", "图表视图") }
     var settingsLabel: String { text("Settings", "设置") }
+    var settingsCommand: String { text("Settings…", "设置…") }
+    var aboutApp: String { text("About Meterlark", "关于 Meterlark") }
+    var settingsAppearance: String { text("Appearance", "外观") }
+    var settingsData: String { text("Data & pricing", "数据与定价") }
+    var settingsAdvanced: String { text("Advanced", "高级") }
+    var settingsGeneralSubtitle: String { text("Startup, language, notifications, and software updates.", "管理启动方式、语言、通知和软件更新。") }
+    var settingsAppearanceSubtitle: String { text("Personalize the dashboard and menu bar.", "调整面板和菜单栏的显示方式。") }
+    var settingsDataSubtitle: String { text("Choose the reporting range, refresh cadence, and pricing sources.", "选择统计范围、刷新频率和价格来源。") }
+    var settingsAdvancedSubtitle: String { text("Change detection and diagnostic tools. Defaults suit normal use.", "变更检测与诊断工具，通常无需调整。") }
+    var settingsCurrentVersion: String { text("Current version", "当前版本") }
+    var settingsLastUpdateCheck: String { text("Last checked", "上次检查") }
+    var settingsNotChecked: String { text("Not checked yet", "尚未检查") }
+    var settingsAutomaticChecksHelp: String { text("Check in the background and let you know when an update is available.", "在后台检查新版本，有更新时提醒你。") }
+    var settingsEditBudget: String { text("Edit budgets…", "编辑预算…") }
+    var settingsEditMenuBar: String { text("Customize menu bar…", "自定义菜单栏…") }
+    var settingsManagePrices: String { text("Manage price list", "管理价目表") }
+    var settingsDashboard: String { text("Dashboard", "面板") }
+    var settingsMenuBar: String { text("Menu bar", "菜单栏") }
     var plugins: String { text("Plugins", "插件") }
     var pluginSettings: String { text("Plugin settings", "插件设置") }
     var pluginSettingsTitle: String { text("Plugin Settings", "插件设置") }
     var dashboardSummary: String { text("Token summary", "Token 汇总") }
-    var customizeDashboardLayout: String { text("Customize Dashboard layout", "自定义 Dashboard 布局") }
+    var customizeDashboardLayout: String { text("Customize dashboard…", "自定义面板…") }
     var dashboardLayoutSettingsTitle: String { text("Dashboard Layout", "Dashboard 布局") }
     var dashboardLayoutPreviewTitle: String { text("Dashboard Preview", "Dashboard 预览") }
     var dashboardLayoutSubtitle: String {
@@ -723,7 +741,7 @@ struct L10n: Sendable {
     var developerDiagnosticsYes: String { text("Yes", "是") }
     var developerDiagnosticsNo: String { text("No", "否") }
     var developerDiagnosticsNotAvailable: String { text("n/a", "无") }
-    var generalSettings: String { text("General", "常规") }
+    var generalSettings: String { text("General", "通用") }
     var appUpdates: String { text("App updates", "应用更新") }
     var checkForAppUpdates: String { text("Check for updates…", "检查更新…") }
     var automaticallyCheckForAppUpdates: String { text("Automatically check for updates", "自动检查更新") }
@@ -769,7 +787,7 @@ struct L10n: Sendable {
             "调整应用内容的可读字号；菜单栏和 macOS 系统菜单保持系统字号。"
         )
     }
-    var surfaceStyle: String { text("Surface style", "表面风格") }
+    var surfaceStyle: String { text("Background", "背景") }
     var solidSurfaceStyle: String { text("Solid color", "纯色") }
     var glassSurfaceStyle: String { text("Frosted glass", "毛玻璃") }
     var surfaceStyleHelp: String {
