@@ -1947,6 +1947,16 @@ final class MonitorStore: ObservableObject {
             }
         } catch {
             launchAtLoginStatus = LaunchAtLoginService.currentStatus()
+            if error as? LaunchAtLoginError == .appOnReadOnlyVolume {
+                let copy = L10n(language: settings.language)
+                let alert = NSAlert()
+                alert.alertStyle = .informational
+                alert.messageText = copy.launchAtLogin
+                alert.informativeText = copy.launchAtLoginInstallMessage
+                alert.addButton(withTitle: copy.ok)
+                alert.runModal()
+                return
+            }
             if enabled == launchAtLoginStatus.isRegistered {
                 if enabled, launchAtLoginStatus == .requiresApproval {
                     openLaunchAtLoginSettings()
