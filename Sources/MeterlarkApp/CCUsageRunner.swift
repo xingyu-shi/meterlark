@@ -175,7 +175,12 @@ final class CCUsageRunner: @unchecked Sendable {
         return calendar.date(byAdding: .day, value: -max(0, lookbackDays - 1), to: today) ?? today
     }
 
-    static func queryScope(for lookbackDays: Int, now: Date, calendar: Calendar = .current) -> UsageQueryScope {
+    static func queryScope(
+        for lookbackDays: Int,
+        now: Date,
+        calendar: Calendar = .current,
+        excludedAgents: [String] = []
+    ) -> UsageQueryScope {
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -186,7 +191,8 @@ final class CCUsageRunner: @unchecked Sendable {
             since: formatter.string(from: start),
             until: formatter.string(from: end),
             timeZone: calendar.timeZone.identifier,
-            lookbackDays: lookbackDays
+            lookbackDays: lookbackDays,
+            excludedAgents: MonitorSettings.normalizedAgentList(excludedAgents)
         )
     }
 
@@ -224,7 +230,12 @@ final class CCUsageRunner: @unchecked Sendable {
         let now = Date()
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
-        let scope = Self.queryScope(for: settings.lookbackDays, now: now, calendar: calendar)
+        let scope = Self.queryScope(
+            for: settings.lookbackDays,
+            now: now,
+            calendar: calendar,
+            excludedAgents: settings.excludedAgents
+        )
         let command = try command(
             settings: settings,
             mode: mode,
@@ -236,6 +247,7 @@ final class CCUsageRunner: @unchecked Sendable {
         let response: CCUsageResponse
         do {
             response = try decoder.decode(CCUsageResponse.self, from: output)
+                .excludingAgents(Set(settings.excludedAgents))
         } catch {
             throw CCUsageRunnerError.invalidJSON(error.localizedDescription)
         }
@@ -289,6 +301,7 @@ final class CCUsageRunner: @unchecked Sendable {
         let response: CCUsageResponse
         do {
             response = try JSONDecoder().decode(CCUsageResponse.self, from: output)
+                .excludingAgents(Set(settings.excludedAgents))
         } catch {
             throw CCUsageRunnerError.invalidJSON(error.localizedDescription)
         }

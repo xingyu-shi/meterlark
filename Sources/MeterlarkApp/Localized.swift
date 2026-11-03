@@ -393,6 +393,9 @@ struct L10n: Sendable {
     var usageRefreshInterval: String { text("Usage refresh interval", "用量刷新间隔") }
     var autoRefreshShort: String { text("Auto-refresh", "自动刷新") }
     var usageSettings: String { text("Usage", "用量") }
+    var monitoredAgents: String { text("Monitored agents", "监控的 Agent") }
+    var noAgentsDetected: String { text("No agents detected yet", "暂未检测到 Agent") }
+    var monitoredAgentsHelp: String { text("Turned-off agents are left out of usage totals, charts, and budgets.", "关闭的 Agent 不计入用量总额、图表和预算。") }
     var sourceVerificationMode: String { text("Change detection", "变更检测") }
     var eventDrivenVerificationMode: String { text("Event-driven", "事件驱动") }
     var periodicFingerprintVerificationMode: String { text("Periodic check", "定期检查") }

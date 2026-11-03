@@ -225,6 +225,20 @@ struct AppSettingsView: View {
                 }
                 helpText(copy.usageRefreshIntervalHelp)
             }
+            Section(copy.monitoredAgents) {
+                let agents = store.selectableAgents
+                if agents.isEmpty {
+                    Text(copy.noAgentsDetected)
+                        .foregroundStyle(.secondary)
+                }
+                ForEach(agents, id: \.self) { agent in
+                    Toggle(agent, isOn: Binding(
+                        get: { store.isAgentMonitored(agent) },
+                        set: { store.setAgentMonitored(agent, $0) }
+                    ))
+                }
+                helpText(copy.monitoredAgentsHelp)
+            }
             Section(copy.pricing) {
                 LabeledContent(copy.customPricing, value: store.customPricingStatusText)
                 Menu {

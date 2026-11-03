@@ -39,6 +39,10 @@ final class BudgetSnapshotStore: @unchecked Sendable {
         try data.write(to: snapshotURL, options: [.atomic])
     }
 
+    func remove() {
+        try? fileManager.removeItem(at: snapshotURL)
+    }
+
     private func quarantineUnreadableSnapshot() {
         let timestamp = Int(Date().timeIntervalSince1970)
         var backupURL = baseURL.appendingPathComponent("monthly-budget.invalid-\(timestamp).json")
