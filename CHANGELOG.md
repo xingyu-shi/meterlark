@@ -9,6 +9,8 @@ included in Meterlark.
 
 ## Unreleased
 
+## 1.2.16 · 2026-11-02
+
 ### Added
 
 - Choose which agents count toward usage in **Settings › Data & pricing › Monitored agents**. Turned-off agents, such as `claude` or `codex`, are left out of usage totals, charts, and daily and monthly budgets, and the choice is kept across restarts.
