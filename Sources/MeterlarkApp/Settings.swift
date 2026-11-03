@@ -360,6 +360,13 @@ struct MonitorSettings: Equatable, Sendable {
     var monthlyCostLimit: Double
     var budgetAlertThreshold: Double
     var surfaceStyle: AppSurfaceStyle
+    /// Sorted ccusage agent identifiers (for example `claude`, `codex`) left
+    /// out of every usage total, chart and budget.
+    var excludedAgents: [String] = []
+
+    static func normalizedAgentList(_ agents: [String]) -> [String] {
+        Array(Set(agents.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })).sorted()
+    }
 
     static let `default` = MonitorSettings(
         refreshInterval: defaultRefreshInterval,
@@ -418,7 +425,8 @@ final class SettingsStore {
             dailyCostLimit: MonitorSettings.validCostLimit(defaults.object(forKey: prefix + "dailyCostLimit") as? Double),
             monthlyCostLimit: MonitorSettings.validCostLimit(defaults.object(forKey: prefix + "monthlyCostLimit") as? Double),
             budgetAlertThreshold: MonitorSettings.validBudgetAlertThreshold(defaults.object(forKey: prefix + "budgetAlertThreshold") as? Double),
-            surfaceStyle: AppSurfaceStyle(rawValue: defaults.string(forKey: prefix + "surfaceStyle") ?? "") ?? MonitorSettings.default.surfaceStyle
+            surfaceStyle: AppSurfaceStyle(rawValue: defaults.string(forKey: prefix + "surfaceStyle") ?? "") ?? MonitorSettings.default.surfaceStyle,
+            excludedAgents: MonitorSettings.normalizedAgentList(defaults.stringArray(forKey: prefix + "excludedAgents") ?? [])
         )
     }
 
@@ -450,6 +458,7 @@ final class SettingsStore {
             forKey: prefix + "budgetAlertThreshold"
         )
         defaults.set(settings.surfaceStyle.rawValue, forKey: prefix + "surfaceStyle")
+        defaults.set(MonitorSettings.normalizedAgentList(settings.excludedAgents), forKey: prefix + "excludedAgents")
     }
 
     func lastPricingAttemptAt() -> Date? {

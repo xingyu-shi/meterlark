@@ -261,6 +261,37 @@ struct UsageQueryScope: Codable, Equatable, Sendable {
     let until: String
     let timeZone: String
     let lookbackDays: Int
+    /// Sorted agent identifiers removed from the report. Part of the scope so
+    /// a snapshot built under a different agent filter is never shown or used
+    /// as a pricing fallback for the current one.
+    let excludedAgents: [String]
+
+    init(
+        since: String,
+        until: String,
+        timeZone: String,
+        lookbackDays: Int,
+        excludedAgents: [String] = []
+    ) {
+        self.since = since
+        self.until = until
+        self.timeZone = timeZone
+        self.lookbackDays = lookbackDays
+        self.excludedAgents = excludedAgents
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case since, until, timeZone, lookbackDays, excludedAgents
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        since = try container.decode(String.self, forKey: .since)
+        until = try container.decode(String.self, forKey: .until)
+        timeZone = try container.decode(String.self, forKey: .timeZone)
+        lookbackDays = try container.decode(Int.self, forKey: .lookbackDays)
+        excludedAgents = try container.decodeIfPresent([String].self, forKey: .excludedAgents) ?? []
+    }
 }
 
 struct UsageSnapshot: Codable, Equatable, Sendable {
@@ -490,8 +521,11 @@ extension UsageSnapshot {
         // however, every old cost/source/tier belongs to a different basis and
         // must be discarded. Otherwise removing table A can resurrect A's
         // known pricing during the next usage refresh.
+        // A different agent filter changes which usage the old costs cover,
+        // so they cannot stand in for the candidate's missing prices.
         let pricingBasisMatches = candidate.customPricingRevision == previous.customPricingRevision
             && candidate.modelCatalogRevision == previous.modelCatalogRevision
+            && (candidate.queryScope?.excludedAgents ?? []) == (previous.queryScope?.excludedAgents ?? [])
         let catalogGapModelKeys = pricingAssessment.catalogGapModelKeys
         let previousDays = Dictionary(uniqueKeysWithValues: previous.days.map { ($0.period, $0) })
         let previousAgents = Dictionary(uniqueKeysWithValues: previous.agents.map { ($0.name, $0) })
@@ -809,6 +843,111 @@ struct CCUsageResponse: Decodable {
         hasDailySection = decodedDaily != nil
         monthly = try container.decodeIfPresent([CCUsageMonthlyRow].self, forKey: .monthly) ?? []
         totals = try container.decodeIfPresent(CCUsageTotals.self, forKey: .totals)
+    }
+
+    init(
+        daily: [CCUsageDailyRow],
+        monthly: [CCUsageMonthlyRow],
+        totals: CCUsageTotals?,
+        hasDailySection: Bool
+    ) {
+        self.daily = daily
+        self.monthly = monthly
+        self.totals = totals
+        self.hasDailySection = hasDailySection
+    }
+
+    /// Removes the given agents before any snapshot or budget is built.
+    /// Aggregate rows are rebuilt from their remaining per-agent rows, and a
+    /// row left with no agents is dropped, so every builder sees the filtered
+    /// usage whether it reads the aggregate or the per-agent breakdown.
+    func excludingAgents(_ excluded: Set<String>) -> CCUsageResponse {
+        guard !excluded.isEmpty else { return self }
+        return CCUsageResponse(
+            daily: daily.compactMap { row in
+                Self.filtered(agent: row.agent, agents: row.agents, excluded: excluded).map { kept in
+                    CCUsageDailyRow(
+                        agent: row.agent,
+                        agents: kept.agents,
+                        period: row.period,
+                        inputTokens: kept.totals.map(\.inputTokens) ?? row.inputTokens,
+                        outputTokens: kept.totals.map(\.outputTokens) ?? row.outputTokens,
+                        cacheCreationTokens: kept.totals.map(\.cacheCreationTokens) ?? row.cacheCreationTokens,
+                        cacheReadTokens: kept.totals.map(\.cacheReadTokens) ?? row.cacheReadTokens,
+                        totalTokens: kept.totals.map(\.totalTokens) ?? row.totalTokens,
+                        totalCost: kept.totals.map(\.totalCost) ?? row.totalCost,
+                        modelBreakdowns: kept.totals.map(\.modelBreakdowns) ?? row.modelBreakdowns
+                    )
+                }
+            },
+            monthly: monthly.compactMap { row in
+                Self.filtered(agent: row.agent, agents: row.agents, excluded: excluded).map { kept in
+                    CCUsageMonthlyRow(
+                        agent: row.agent,
+                        agents: kept.agents,
+                        period: row.period,
+                        inputTokens: kept.totals.map(\.inputTokens) ?? row.inputTokens,
+                        outputTokens: kept.totals.map(\.outputTokens) ?? row.outputTokens,
+                        cacheCreationTokens: kept.totals.map(\.cacheCreationTokens) ?? row.cacheCreationTokens,
+                        cacheReadTokens: kept.totals.map(\.cacheReadTokens) ?? row.cacheReadTokens,
+                        totalTokens: kept.totals.map(\.totalTokens) ?? row.totalTokens,
+                        totalCost: kept.totals.map(\.totalCost) ?? row.totalCost,
+                        modelBreakdowns: kept.totals.map(\.modelBreakdowns) ?? row.modelBreakdowns
+                    )
+                }
+            },
+            // The report-wide totals cannot be split by agent; nothing reads them.
+            totals: nil,
+            hasDailySection: hasDailySection
+        )
+    }
+
+    private struct FilteredRow {
+        let agents: [CCUsageAgentRow]?
+        /// Recomputed row totals; nil keeps the row's own values.
+        let totals: CCUsageAgentRow?
+    }
+
+    private static func filtered(
+        agent: String?,
+        agents: [CCUsageAgentRow]?,
+        excluded: Set<String>
+    ) -> FilteredRow? {
+        if let agents, !agents.isEmpty {
+            let kept = agents.filter { !excluded.contains($0.agent ?? "") }
+            guard !kept.isEmpty else { return nil }
+            guard kept.count != agents.count else {
+                return FilteredRow(agents: agents, totals: nil)
+            }
+            return FilteredRow(agents: kept, totals: sum(kept))
+        }
+        if let agent, excluded.contains(agent) {
+            return nil
+        }
+        return FilteredRow(agents: agents, totals: nil)
+    }
+
+    private static func sum(_ rows: [CCUsageAgentRow]) -> CCUsageAgentRow {
+        func total(_ value: (CCUsageAgentRow) -> Int64?) -> Int64? {
+            let values = rows.compactMap(value)
+            return values.isEmpty ? nil : values.reduce(0, saturatingAdd)
+        }
+        let costs = rows.compactMap(\.totalCost)
+        return CCUsageAgentRow(
+            agent: "all",
+            inputTokens: total(\.inputTokens),
+            outputTokens: total(\.outputTokens),
+            cacheCreationTokens: total(\.cacheCreationTokens),
+            cacheReadTokens: total(\.cacheReadTokens),
+            totalTokens: total(\.totalTokens),
+            totalCost: costs.isEmpty ? nil : costs.reduce(0, +),
+            modelBreakdowns: rows.flatMap { $0.modelBreakdowns ?? [] }
+        )
+    }
+
+    private static func saturatingAdd(_ lhs: Int64, _ rhs: Int64) -> Int64 {
+        let (sum, overflow) = lhs.addingReportingOverflow(rhs)
+        return overflow ? Int64.max : sum
     }
 }
 

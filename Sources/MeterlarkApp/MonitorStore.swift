@@ -91,6 +91,8 @@ private struct MonthlyBudgetRefreshKey: Equatable {
     let customPricingRevision: String?
     let modelCatalogRevision: String?
     let pricingUpdatedAt: Date?
+    /// A scan started under a different agent filter is stale work.
+    let excludedAgents: [String]
 }
 
 private struct RefreshDiagnosticRecord {
@@ -499,7 +501,8 @@ final class MonitorStore: ObservableObject {
         self.pluginStates = pluginHost?.snapshots ?? []
         let initialScope = CCUsageRunner.queryScope(
             for: initialSettings.lookbackDays,
-            now: (nowProvider ?? { Date() })()
+            now: (nowProvider ?? { Date() })(),
+            excludedAgents: initialSettings.excludedAgents
         )
         if loadedSnapshot.hasData, loadedSnapshot.queryScope != initialScope {
             // A legacy snapshot has no proof of its date range, so do not
@@ -1784,6 +1787,53 @@ final class MonitorStore: ObservableObject {
         )
     }
 
+    /// Agents listed before the last filter change, so the other toggles stay
+    /// visible while the rescan replaces the cleared report.
+    private var agentsBeforeFilterChange: [String] = []
+
+    /// Agents that appear in the current report or are already excluded, so
+    /// an excluded agent stays listed and can be turned back on.
+    var selectableAgents: [String] {
+        MonitorSettings.normalizedAgentList(
+            snapshot.agents.map(\.name) + settings.excludedAgents + agentsBeforeFilterChange
+        )
+    }
+
+    func isAgentMonitored(_ agent: String) -> Bool {
+        !settings.excludedAgents.contains(agent)
+    }
+
+    func setAgentMonitored(_ agent: String, _ monitored: Bool) {
+        var excluded = Set(settings.excludedAgents)
+        if monitored {
+            excluded.remove(agent)
+        } else {
+            excluded.insert(agent)
+        }
+        let updated = MonitorSettings.normalizedAgentList(Array(excluded))
+        guard updated != settings.excludedAgents else { return }
+        agentsBeforeFilterChange = selectableAgents
+        settings.excludedAgents = updated
+        // The monthly result covers the old agent set. Drop it, including the
+        // persisted copy, so a restart before the rescan cannot bring it back.
+        monthlyBudget = nil
+        budgetSnapshotStore.remove()
+        monthlyBudgetRefreshRequested = settings.monthlyCostLimit > 0
+        dirtyGeneration += 1
+        isDirty = true
+        dirtySince = dirtySince ?? currentDate
+        phase = .waiting
+        // Same as a lookback change: the visible report belongs to the old
+        // filter. The scope mismatch also keeps its costs out of the merge.
+        snapshot = .empty
+        lastSourceEventAt = currentDate
+        beginRefresh(
+            intent: .pricing(fallbackToOffline: true, allowEmptyCandidate: true),
+            bypassInterval: true,
+            generation: dirtyGeneration,
+        )
+    }
+
     func setLanguage(_ language: AppLanguage) {
         settings.language = language
         pluginHost?.setLanguage(language)
@@ -2245,7 +2295,8 @@ final class MonitorStore: ObservableObject {
             day: MonthlyBudgetSnapshot.dayPeriod(for: currentDate),
             customPricingRevision: activeCustomPricingRevision,
             modelCatalogRevision: activeModelCatalogRevision,
-            pricingUpdatedAt: pricingReferenceSnapshot.pricingUpdatedAt
+            pricingUpdatedAt: pricingReferenceSnapshot.pricingUpdatedAt,
+            excludedAgents: MonitorSettings.normalizedAgentList(settings.excludedAgents)
         )
     }
 
@@ -3210,7 +3261,11 @@ final class MonitorStore: ObservableObject {
     }
 
     private var currentQueryScope: UsageQueryScope {
-        CCUsageRunner.queryScope(for: settings.lookbackDays, now: currentDate)
+        CCUsageRunner.queryScope(
+            for: settings.lookbackDays,
+            now: currentDate,
+            excludedAgents: settings.excludedAgents
+        )
     }
 
     private var pricingIsDue: Bool {
