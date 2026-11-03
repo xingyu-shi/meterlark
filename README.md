@@ -117,12 +117,12 @@ This source revision bundles `ccusage 20.0.32` and recognizes these local harnes
 
 ### Distribution
 
-Download [Meterlark 1.2.15 for Apple Silicon (DMG)](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.15/Meterlark-1.2.15-arm64.dmg).
+Download [Meterlark 1.2.16 for Apple Silicon (DMG)](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.16/Meterlark-1.2.16-arm64.dmg).
 Open the DMG and drag **Meterlark** onto **Applications** in the installer window.
 Eject the disk image, then open Meterlark from Applications.
 
-The release includes a [DMG SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.15/Meterlark-1.2.15-arm64.dmg.sha256).
-A [ZIP download](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.15/Meterlark-1.2.15-arm64.zip)
+The release includes a [DMG SHA-256 checksum](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.16/Meterlark-1.2.16-arm64.dmg.sha256).
+A [ZIP download](https://github.com/xingyu-shi/meterlark/releases/download/v1.2.16/Meterlark-1.2.16-arm64.zip)
 is also available for manual installation. Choose one format.
 See [all releases](https://github.com/xingyu-shi/meterlark/releases) and the
 [version history](CHANGELOG.md) for changes.
