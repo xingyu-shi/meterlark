@@ -280,7 +280,7 @@ final class MonitorStore: ObservableObject {
     /// this value changes automatically reprices the cached snapshot instead
     /// of presenting a result produced by the old cost engine until the normal
     /// 24-hour pricing interval elapses.
-    private static let pricingEngineRevision = "ccusage-20.0.32-config-v4-unified-provider-overrides"
+    private static let pricingEngineRevision = "ccusage-20.1.1-config-v4-unified-provider-overrides"
     /// The watcher is the normal refresh trigger. This watchdog only covers
     /// state that cannot be delivered reliably as a file event: new roots,
     /// watcher recovery, date/pricing rollovers, and fallback scans.

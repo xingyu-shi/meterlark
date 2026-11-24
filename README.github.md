@@ -44,7 +44,7 @@ Meterlark keeps AI coding usage, cost estimates, budgets, and provider informati
 
 | | What you get |
 | --- | --- |
-| Local-first | Reads aggregate output from `ccusage`; prompts and responses never leave the machine through this app. |
+| Local-first | Reads aggregate output from `ccusage`; prompts and responses stay local, and Meterlark disables ccusage's optional adoption telemetry. |
 | Multiple coding agents | Uses the unified `--by-agent --json` report, so new detected agent sources flow through the same view. |
 | Usage by day | One compact chart with a readable `Tokens · by Agent` / `Cost · by Model` view selector. |
 | Real detail on hover | Select a date to inspect total tokens, cost, agents, or every actual model behind the chart's `Other` bucket. |
@@ -92,15 +92,18 @@ precedence. Catalog changes appear in the in-app notification feed.
 
 ## Supported harness agents
 
-This source revision bundles `ccusage 20.0.32` and recognizes these local harness and agent sources. Meterlark consumes the unified `--by-agent --json` report, so a source appears when `ccusage` detects its local data:
+This source revision bundles `ccusage 20.1.1` and recognizes these local harness and agent sources. Meterlark consumes the unified `--by-agent --json` report, so a source appears when `ccusage` detects its local data:
 
 - Claude Code
 - Codex
 - OpenCode
 - Amp
 - Droid
+- Cline (`cline`)
 - Codebuff
+- DeepSeek Harness (`dsh`)
 - Hermes
+- Junie (`junie`)
 - pi-agent
 - Goose
 - Kilo
@@ -266,7 +269,9 @@ Tests/                       Decoder, localization, and live runner tests
 
 This is a local monitor, not a billing authority. The displayed amount is an API-equivalent estimate calculated by the bundled `ccusage`; it is not a provider subscription invoice or an internal gateway bill. A model without a matching price is not silently treated as free.
 
-The source bundle includes `ccusage 20.0.32`, licensed under MIT. See `Resources/THIRD_PARTY_NOTICES.txt`.
+Meterlark sets `CCUSAGE_TELEMETRY_DISABLED=1` for the bundled process, opting out of the official ccusage release's anonymous adoption ping.
+
+The source bundle includes `ccusage 20.1.1`, licensed under MIT. See `Resources/THIRD_PARTY_NOTICES.txt`.
 
 ## Contributing
 

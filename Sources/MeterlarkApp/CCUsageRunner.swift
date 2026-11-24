@@ -338,6 +338,9 @@ final class CCUsageRunner: @unchecked Sendable {
         process.standardError = errorPipe
 
         var environment = ProcessInfo.processInfo.environment
+        // Official ccusage binaries collect opt-out daily adoption telemetry.
+        // Meterlark keeps its local-first behavior by disabling it explicitly.
+        environment["CCUSAGE_TELEMETRY_DISABLED"] = "1"
         let path = environment["PATH"] ?? ""
         if !path.contains("/opt/homebrew/bin") {
             environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + path

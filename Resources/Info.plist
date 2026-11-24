@@ -21,9 +21,9 @@
 	<key>CFBundleVersion</key>
 	<string>43</string>
 	<key>CCUsageVersion</key>
-	<string>20.0.32</string>
+	<string>20.1.1</string>
 	<key>CCUsageSHA256</key>
-	<string>8df7988841d6236ea6a6573718866a1ef3957379fa181754dfee8f701412a57a</string>
+	<string>45eb49994d7ed47e70a48ed2b497297da756d4b8eadef25fc365c4b89d595fb4</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

@@ -13,6 +13,10 @@ included in Meterlark.
 
 - Choose a reporting time zone in **Settings › Data & pricing**. The system zone remains the default; a custom IANA zone keeps ccusage grouping, Today totals, charts, and budget boundaries aligned.
 
+### Changed
+
+- Update the bundled ccusage engine from 20.0.32 to 20.1.1, including upstream parsing, pricing, and bounded-report performance fixes. The update adds Cline, DeepSeek Harness, and Junie detection; upstream price corrections may change estimates. Meterlark disables ccusage's optional daily adoption ping.
+
 ## 1.2.16 · 2026-11-02
 
 ### Added

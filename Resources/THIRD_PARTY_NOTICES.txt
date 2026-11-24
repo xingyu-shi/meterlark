@@ -1,6 +1,6 @@
 Third-party software bundled with Meterlark
 
-ccusage 20.0.32
+ccusage 20.1.1
 Package: @ccusage/ccusage-darwin-arm64
 Repository: https://github.com/ccusage/ccusage
 License: MIT

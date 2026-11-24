@@ -2,6 +2,31 @@ import XCTest
 @testable import MeterlarkApp
 
 final class CCUsageRunnerTimeoutTests: XCTestCase {
+    func testRunnerDisablesCcusageTelemetryInChildEnvironment() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ccusage-telemetry-opt-out-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let scriptURL = root.appendingPathComponent("ccusage.sh")
+        let markerURL = root.appendingPathComponent("telemetry-state.txt")
+        let script = """
+        #!/bin/sh
+        printf '%s' "${CCUSAGE_TELEMETRY_DISABLED-unset}" > '\(markerURL.path)'
+        printf '{}'
+        """
+        try Data(script.utf8).write(to: scriptURL)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptURL.path)
+
+        _ = try CCUsageRunner(bundledExecutableURL: scriptURL).run(
+            settings: .default,
+            mode: .onlinePricing,
+            previousPricingDate: nil
+        )
+
+        XCTAssertEqual(try String(contentsOf: markerURL, encoding: .utf8), "1")
+    }
+
     func testTimeoutKillsBlockingBundledRunnerAndReturnsPromptly() throws {
         let scriptURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("ccusage-timeout-\(UUID().uuidString).sh")
