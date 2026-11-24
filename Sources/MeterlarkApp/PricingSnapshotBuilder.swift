@@ -222,6 +222,7 @@ extension UsageSnapshotBuilder {
         customPricingRevision: String?,
         modelCatalogRevision: String? = nil,
         realtimeAnchorDay: String? = nil,
+        timeZone: String? = nil,
         pricingContext: PricingResolutionContext
     ) -> MonthlyBudgetSnapshot {
         makeMonthlyBudgetResult(
@@ -231,6 +232,7 @@ extension UsageSnapshotBuilder {
             customPricingRevision: customPricingRevision,
             modelCatalogRevision: modelCatalogRevision,
             realtimeAnchorDay: realtimeAnchorDay,
+            timeZone: timeZone,
             pricingContext: pricingContext
         ).snapshot
     }
@@ -242,6 +244,7 @@ extension UsageSnapshotBuilder {
         customPricingRevision: String?,
         modelCatalogRevision: String? = nil,
         realtimeAnchorDay: String? = nil,
+        timeZone: String? = nil,
         pricingContext: PricingResolutionContext
     ) -> MonthlyBudgetBuildResult {
         let resolver = PricingResolver(context: pricingContext)
@@ -376,6 +379,7 @@ extension UsageSnapshotBuilder {
 
         let snapshot = MonthlyBudgetSnapshot(
             month: month,
+            timeZone: timeZone,
             generatedAt: Date(),
             pricingUpdatedAt: pricingUpdatedAt,
             customPricingRevision: customPricingRevision,

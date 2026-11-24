@@ -32,6 +32,35 @@ final class LiveRunnerTests: XCTestCase {
         XCTAssertFalse(command.arguments.contains("--mode"))
     }
 
+    func testDailyUsageCommandPassesTheConfiguredTimeZone() throws {
+        var settings = MonitorSettings.default
+        settings.timeZoneIdentifier = "Asia/Shanghai"
+
+        let command = try CCUsageRunner(bundledExecutableURL: bundledURL).command(
+            settings: settings,
+            mode: .usage
+        )
+
+        let timeZoneIndex = try XCTUnwrap(command.arguments.firstIndex(of: "--timezone"))
+        XCTAssertEqual(command.arguments[timeZoneIndex + 1], "Asia/Shanghai")
+    }
+
+    func testQueryScopeUsesTheConfiguredCalendarDayBoundary() {
+        var settings = MonitorSettings.default
+        settings.timeZoneIdentifier = "Asia/Tokyo"
+        let now = ISO8601DateFormatter().date(from: "2026-08-18T01:30:00Z")!
+
+        let scope = CCUsageRunner.queryScope(
+            for: 1,
+            now: now,
+            calendar: settings.reportingCalendar
+        )
+
+        XCTAssertEqual(scope.since, "2026-08-18")
+        XCTAssertEqual(scope.until, "2026-08-18")
+        XCTAssertEqual(scope.timeZone, "Asia/Tokyo")
+    }
+
     func testMonthlyBudgetCommandUsesNaturalMonthAndPricingConfig() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -53,6 +82,8 @@ final class LiveRunnerTests: XCTestCase {
         XCTAssertEqual(command.arguments.first, "monthly")
         XCTAssertEqual(command.arguments[sinceIndex + 1], "2026-08-01")
         XCTAssertEqual(command.arguments[untilIndex + 1], "2026-08-18")
+        let timeZoneIndex = try XCTUnwrap(command.arguments.firstIndex(of: "--timezone"))
+        XCTAssertEqual(command.arguments[timeZoneIndex + 1], calendar.timeZone.identifier)
         XCTAssertEqual(command.arguments[configIndex + 1], config.path)
         let sectionsIndex = try XCTUnwrap(command.arguments.firstIndex(of: "--sections"))
         XCTAssertEqual(command.arguments[sectionsIndex + 1], "daily,monthly")

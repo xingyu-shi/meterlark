@@ -576,6 +576,24 @@ private struct UsageByDayChart: View {
     @State private var selectedDate: Date?
 
     private var copy: L10n { L10n(language: language) }
+    private var reportingTimeZone: TimeZone { snapshot.reportingTimeZone }
+
+    private var reportingCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = reportingTimeZone
+        return calendar
+    }
+
+    private var chartAxisDateFormat: Date.FormatStyle {
+        let base = Date.FormatStyle(
+            date: .omitted,
+            time: .omitted,
+            locale: .current,
+            calendar: reportingCalendar,
+            timeZone: reportingTimeZone
+        )
+        return base.month(.abbreviated).day()
+    }
 
     private var points: [UsageChartPoint] {
         let names = topModelNames
@@ -590,14 +608,28 @@ private struct UsageByDayChart: View {
                 series = names.contains(item.name) ? item.name : "Other"
             }
             let key = "\(item.period)::\(series)"
-            var point = grouped[key] ?? UsageChartPoint(period: item.period, series: series, tokens: .zero, cost: 0)
+            var point = grouped[key] ?? UsageChartPoint(
+                period: item.period,
+                series: series,
+                tokens: .zero,
+                cost: 0,
+                timeZone: reportingTimeZone
+            )
             point.tokens += item.tokens
             if item.hasKnownPricing { point.cost += item.estimatedCost }
             grouped[key] = point
         }
 
         if grouped.isEmpty {
-            return snapshot.days.map { UsageChartPoint(period: $0.period, series: "All", tokens: $0.tokens, cost: $0.estimatedCost) }
+            return snapshot.days.map {
+                UsageChartPoint(
+                    period: $0.period,
+                    series: "All",
+                    tokens: $0.tokens,
+                    cost: $0.estimatedCost,
+                    timeZone: reportingTimeZone
+                )
+            }
         }
         return grouped.values.sorted { $0.period == $1.period ? $0.series < $1.series : $0.period < $1.period }
     }
@@ -657,8 +689,8 @@ private struct UsageByDayChart: View {
     private var selectedPeriod: String? {
         guard let selectedDate else { return nil }
         return points.min {
-            abs(ChartDate.date(from: $0.period).timeIntervalSince(selectedDate)) <
-                abs(ChartDate.date(from: $1.period).timeIntervalSince(selectedDate))
+            abs(ChartDate.date(from: $0.period, timeZone: reportingTimeZone).timeIntervalSince(selectedDate)) <
+                abs(ChartDate.date(from: $1.period, timeZone: reportingTimeZone).timeIntervalSince(selectedDate))
         }?.period
     }
 
@@ -676,7 +708,7 @@ private struct UsageByDayChart: View {
                     AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                         AxisGridLine().foregroundStyle(Color.line)
                         AxisTick().foregroundStyle(Color.line)
-                        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                        AxisValueLabel(format: chartAxisDateFormat)
                             .font(AppTypography(textSize: interfaceTextSize).font(for: .metadata))
                     }
                 }
@@ -688,6 +720,8 @@ private struct UsageByDayChart: View {
                     }
                 }
                 .chartLegend(.hidden)
+                .environment(\.calendar, reportingCalendar)
+                .environment(\.timeZone, reportingTimeZone)
                 .chartForegroundStyleScale(
                     domain: seriesNames,
                     range: seriesNames.map { colors[$0] ?? Color.signal }
@@ -823,7 +857,7 @@ private struct UsageByDayChart: View {
             values.reduce(0.0) { $0 + $1.value(for: metric) }
         }
         guard let peak = totals.max(by: { $0.value < $1.value }) else { return "—" }
-        return ChartDate.display(peak.key)
+        return ChartDate.display(peak.key, timeZone: reportingTimeZone)
     }
 
     private var seriesCount: Int {
@@ -835,6 +869,7 @@ private struct UsageByDayChart: View {
             if let selectedPeriod, isDatePinned {
                 UsageChartDetail(
                     period: selectedPeriod,
+                    timeZone: reportingTimeZone,
                     points: points.filter { $0.period == selectedPeriod },
                     dailyModels: snapshot.dailyModels.filter { $0.period == selectedPeriod },
                     metric: metric,
@@ -861,7 +896,8 @@ private struct UsageByDayChart: View {
                         ? NumberFormat.compact(selectedPoints.reduce(0) { $0 + $1.tokens.totalTokens })
                         : Currency.format(selectedPoints.reduce(0) { $0 + $1.cost }),
                     metric: metric,
-                    language: language
+                    language: language,
+                    timeZone: reportingTimeZone
                 )
             } else if points.isEmpty {
                 Text(copy.waitingRefresh)
@@ -924,7 +960,7 @@ private struct UsageByDayChart: View {
         let x = location.x - plotFrame.origin.x
         guard x >= 0, x <= plotFrame.width,
               let date: Date = proxy.value(atX: x, as: Date.self) else { return }
-        let nextDate = ChartDate.date(from: nearestPeriod(to: date))
+        let nextDate = ChartDate.date(from: nearestPeriod(to: date), timeZone: reportingTimeZone)
         guard selectedDate != nextDate else { return }
         selectedDate = nextDate
     }
@@ -1022,6 +1058,7 @@ private struct CompactDetailPreview: View {
     let value: String
     let metric: ChartMetric
     let language: AppLanguage
+    let timeZone: TimeZone
     @Environment(\.interfaceTextSize) private var interfaceTextSize
 
     private var copy: L10n { L10n(language: language) }
@@ -1031,7 +1068,7 @@ private struct CompactDetailPreview: View {
             Image(systemName: "cursorarrow.rays")
                 .appFont(.metadataEmphasis)
                 .foregroundStyle(metric == .tokens ? Color.signal : Color.warning)
-            Text(ChartDate.display(period))
+            Text(ChartDate.display(period, timeZone: timeZone))
                 .appFont(.metadataEmphasis)
                 .foregroundStyle(Color.bone)
             Spacer()
@@ -1059,10 +1096,10 @@ private struct UsageChartPoint: Identifiable {
     var tokens: TokenTotals
     var cost: Double
 
-    init(period: String, series: String, tokens: TokenTotals, cost: Double) {
+    init(period: String, series: String, tokens: TokenTotals, cost: Double, timeZone: TimeZone) {
         self.period = period
         self.series = series
-        self.date = ChartDate.date(from: period)
+        self.date = ChartDate.date(from: period, timeZone: timeZone)
         self.tokens = tokens
         self.cost = cost
     }
@@ -1076,6 +1113,7 @@ private struct UsageChartPoint: Identifiable {
 
 private struct UsageChartDetail: View {
     let period: String
+    let timeZone: TimeZone
     let points: [UsageChartPoint]
     let dailyModels: [DailyModelUsage]
     let metric: ChartMetric
@@ -1101,7 +1139,7 @@ private struct UsageChartDetail: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(ChartDate.display(period))
+                Text(ChartDate.display(period, timeZone: timeZone))
                     .appFont(.bodyAlert)
                     .foregroundStyle(Color.bone)
                 Spacer()
@@ -1542,26 +1580,22 @@ private extension ChartMetric {
 }
 
 private enum ChartDate {
-    static let formatter: DateFormatter = {
+    static func date(from period: String, timeZone: TimeZone) -> Date {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
-        return formatter
-    }()
-
-    static func date(from period: String) -> Date {
-        formatter.date(from: period) ?? .distantPast
+        return formatter.date(from: period) ?? .distantPast
     }
 
-    static func display(_ period: String) -> String {
+    static func display(_ period: String, timeZone: TimeZone) -> String {
         let displayFormatter = DateFormatter()
         displayFormatter.calendar = Calendar(identifier: .gregorian)
         displayFormatter.locale = .current
-        displayFormatter.timeZone = .current
+        displayFormatter.timeZone = timeZone
         displayFormatter.dateFormat = "EEE, MMM d"
-        return displayFormatter.string(from: date(from: period))
+        return displayFormatter.string(from: date(from: period, timeZone: timeZone))
     }
 }
 

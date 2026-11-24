@@ -393,6 +393,20 @@ struct L10n: Sendable {
     var usageRefreshInterval: String { text("Usage refresh interval", "用量刷新间隔") }
     var autoRefreshShort: String { text("Auto-refresh", "自动刷新") }
     var usageSettings: String { text("Usage", "用量") }
+    var reportingTimeZone: String { text("Reporting time zone", "统计时区") }
+    func systemTimeZoneLabel(_ identifier: String) -> String {
+        text("System default · \(identifier)", "跟随系统 · \(identifier)")
+    }
+    var customTimeZone: String { text("Custom IANA time zone", "自定义 IANA 时区") }
+    var timeZoneIdentifierPlaceholder: String { text("e.g. Asia/Shanghai or UTC", "例如 Asia/Shanghai 或 UTC") }
+    var applyTimeZone: String { text("Apply", "应用") }
+    var invalidTimeZone: String { text("Enter a valid IANA time zone, such as Asia/Shanghai.", "请输入有效的 IANA 时区，例如 Asia/Shanghai。") }
+    var reportingTimeZoneHelp: String {
+        text(
+            "Controls day grouping, Today totals, and daily/monthly budget boundaries. Use the system zone or enter an IANA identifier; this does not change your macOS clock.",
+            "控制按日分组、“今天”总量以及每日/月度预算边界。可跟随系统或输入 IANA 时区；不会更改 macOS 系统时钟。"
+        )
+    }
     var monitoredAgents: String { text("Monitored agents", "监控的 Agent") }
     var noAgentsDetected: String { text("No agents detected yet", "暂未检测到 Agent") }
     var monitoredAgentsHelp: String { text("Turned-off agents are left out of usage totals, charts, and budgets.", "关闭的 Agent 不计入用量总额、图表和预算。") }

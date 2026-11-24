@@ -11,6 +11,7 @@ final class BudgetSnapshotStoreTests: XCTestCase {
         let store = BudgetSnapshotStore(baseURL: directory)
         let snapshot = MonthlyBudgetSnapshot(
             month: "2026-08",
+            timeZone: "Asia/Tokyo",
             generatedAt: Date(timeIntervalSince1970: 100),
             pricingUpdatedAt: Date(timeIntervalSince1970: 90),
             customPricingRevision: "revision",

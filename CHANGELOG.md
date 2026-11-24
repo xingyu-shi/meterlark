@@ -9,6 +9,10 @@ included in Meterlark.
 
 ## Unreleased
 
+### Added
+
+- Choose a reporting time zone in **Settings › Data & pricing**. The system zone remains the default; a custom IANA zone keeps ccusage grouping, Today totals, charts, and budget boundaries aligned.
+
 ## 1.2.16 · 2026-11-02
 
 ### Added

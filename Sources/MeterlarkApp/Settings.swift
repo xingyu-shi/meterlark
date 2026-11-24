@@ -211,6 +211,33 @@ struct MonitorSettings: Equatable, Sendable {
     static let defaultBudgetAlertThreshold: Double = 0.8
     static let minimumBudgetAlertThreshold: Double = 0.01
     static let maximumBudgetAlertThreshold: Double = 1.0
+    static let systemTimeZoneIdentifier = "local"
+
+    static func normalizedTimeZoneIdentifier(_ value: String) -> String? {
+        let identifier = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !identifier.isEmpty else { return nil }
+        if identifier == systemTimeZoneIdentifier { return systemTimeZoneIdentifier }
+        guard TimeZone(identifier: identifier) != nil else { return nil }
+        return identifier
+    }
+
+    static func validatedTimeZoneIdentifier(_ value: String?) -> String {
+        guard let value, let identifier = normalizedTimeZoneIdentifier(value) else {
+            return systemTimeZoneIdentifier
+        }
+        return identifier
+    }
+
+    var reportingTimeZone: TimeZone {
+        if timeZoneIdentifier == Self.systemTimeZoneIdentifier { return .current }
+        return TimeZone(identifier: timeZoneIdentifier) ?? .current
+    }
+
+    var reportingCalendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = reportingTimeZone
+        return calendar
+    }
 
     static func isValidPopoverHeight(_ value: Double) -> Bool {
         value.isFinite && (minimumPopoverHeight...maximumPopoverHeight).contains(value)
@@ -346,6 +373,7 @@ struct MonitorSettings: Equatable, Sendable {
     var sourceVerificationMode: SourceVerificationMode
     var fingerprintCheckInterval: TimeInterval
     var lookbackDays: Int
+    var timeZoneIdentifier: String
     var pricingRefreshHours: Double
     var automaticPricingRefresh: Bool
     var notificationFeedEnabled: Bool
@@ -373,6 +401,7 @@ struct MonitorSettings: Equatable, Sendable {
         sourceVerificationMode: .eventDriven,
         fingerprintCheckInterval: defaultFingerprintCheckInterval,
         lookbackDays: 30,
+        timeZoneIdentifier: systemTimeZoneIdentifier,
         pricingRefreshHours: defaultPricingRefreshHours,
         automaticPricingRefresh: true,
         notificationFeedEnabled: true,
@@ -410,6 +439,7 @@ final class SettingsStore {
             sourceVerificationMode: SourceVerificationMode(rawValue: defaults.string(forKey: prefix + "sourceVerificationMode") ?? "") ?? MonitorSettings.default.sourceVerificationMode,
             fingerprintCheckInterval: MonitorSettings.validatedFingerprintCheckInterval(defaults.object(forKey: prefix + "fingerprintCheckInterval") as? Double),
             lookbackDays: defaults.object(forKey: prefix + "lookbackDays") as? Int ?? MonitorSettings.default.lookbackDays,
+            timeZoneIdentifier: MonitorSettings.validatedTimeZoneIdentifier(defaults.string(forKey: prefix + "timeZoneIdentifier")),
             pricingRefreshHours: MonitorSettings.validatedPricingRefreshHours(
                 defaults.object(forKey: prefix + "pricingRefreshHours") as? Double
             ),
@@ -438,6 +468,10 @@ final class SettingsStore {
             forKey: prefix + "fingerprintCheckInterval"
         )
         defaults.set(settings.lookbackDays, forKey: prefix + "lookbackDays")
+        defaults.set(
+            MonitorSettings.validatedTimeZoneIdentifier(settings.timeZoneIdentifier),
+            forKey: prefix + "timeZoneIdentifier"
+        )
         defaults.set(
             MonitorSettings.validatedPricingRefreshHours(settings.pricingRefreshHours),
             forKey: prefix + "pricingRefreshHours"

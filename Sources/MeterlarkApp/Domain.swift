@@ -331,6 +331,11 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
 
     var hasData: Bool { !days.isEmpty || !models.isEmpty }
 
+    var reportingTimeZone: TimeZone {
+        guard let identifier = queryScope?.timeZone else { return .current }
+        return TimeZone(identifier: identifier) ?? .current
+    }
+
     var todayUsage: DailyUsage? {
         todayUsage(relativeTo: Date())
     }
@@ -340,7 +345,7 @@ struct UsageSnapshot: Codable, Equatable, Sendable {
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "yyyy-MM-dd"
-        formatter.timeZone = .current
+        formatter.timeZone = reportingTimeZone
         let today = formatter.string(from: now)
         return days.first(where: { $0.period == today })
     }
