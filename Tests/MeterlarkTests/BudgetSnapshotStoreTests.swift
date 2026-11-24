@@ -146,6 +146,8 @@ final class BudgetSnapshotStoreTests: XCTestCase {
         let loaded = try XCTUnwrap(store.load())
         let model = try XCTUnwrap(loaded.models.first)
         XCTAssertEqual(loaded.schemaVersion, MonthlyBudgetSnapshot.currentSchemaVersion)
+        XCTAssertNil(loaded.timeZone)
+        XCTAssertFalse(loaded.matchesTimeZone(TimeZone.current.identifier))
         XCTAssertNil(loaded.modelCatalogRevision)
         XCTAssertFalse(loaded.pricingBasisPreserved)
         XCTAssertEqual(model.pricingSource, .ccusage)

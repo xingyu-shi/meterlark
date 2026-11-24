@@ -321,9 +321,9 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
     }
 
     func matchesTimeZone(_ identifier: String) -> Bool {
-        if let timeZone { return timeZone == identifier }
-        // Pre-time-zone snapshots were always generated using the system zone.
-        return identifier == TimeZone.current.identifier
+        // A legacy total without a recorded zone cannot be safely reused.
+        guard let timeZone else { return false }
+        return timeZone == identifier
     }
 
     var hasRealtimeProjection: Bool {
@@ -333,7 +333,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
     init(
         schemaVersion: Int = currentSchemaVersion,
         month: String,
-        timeZone: String? = nil,
+        timeZone: String? = TimeZone.current.identifier,
         generatedAt: Date,
         pricingUpdatedAt: Date?,
         customPricingRevision: String?,

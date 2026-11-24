@@ -16,6 +16,7 @@ included in Meterlark.
 ### Changed
 
 - Update the bundled ccusage engine from 20.0.32 to 20.1.1, including upstream parsing, pricing, and bounded-report performance fixes. The update adds Cline, DeepSeek Harness, and Junie detection; upstream price corrections may change estimates. Meterlark disables ccusage's optional daily adoption ping.
+- Recalculate legacy monthly budget snapshots without recorded time zones instead of assuming they used the current system zone.
 
 ## 1.2.16 · 2026-11-02
 

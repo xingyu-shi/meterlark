@@ -569,6 +569,34 @@ final class BudgetTests: XCTestCase {
         XCTAssertEqual(status.monthly.level, .noData)
     }
 
+    func testMonthlyBudgetWithoutRecordedTimeZoneIsNotReused() {
+        let now = Date(timeIntervalSince1970: 1_755_456_000)
+        let month = MonthlyBudgetSnapshot.monthPeriod(for: now)
+        var settings = MonitorSettings.default
+        settings.monthlyCostLimit = 100
+        let legacy = MonthlyBudgetSnapshot(
+            month: month,
+            timeZone: nil,
+            generatedAt: now.addingTimeInterval(-60),
+            pricingUpdatedAt: nil,
+            customPricingRevision: nil,
+            models: [],
+            totalTokens: 10,
+            estimatedCost: 80,
+            unknownPricingModels: []
+        )
+
+        let status = BudgetStatus.evaluate(
+            snapshot: .empty,
+            monthlySnapshot: legacy,
+            settings: settings,
+            now: now
+        )
+
+        XCTAssertNil(status.monthly.cost)
+        XCTAssertEqual(status.monthly.level, .noData)
+    }
+
     func testMonthlyBudgetDoesNotProjectAcrossDaysMissingFromShortUsageScope() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
