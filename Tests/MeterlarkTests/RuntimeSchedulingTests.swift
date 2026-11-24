@@ -1457,8 +1457,14 @@ final class RuntimeSchedulingTests: XCTestCase {
 
     func testTimeZoneChangeCannotPublishAnOlderInFlightScope() throws {
         let clock = TestClock()
-        let oldScope = CCUsageRunner.queryScope(for: 30, now: clock.now)
-        var newSettings = MonitorSettings.default
+        var oldSettings = MonitorSettings.default
+        oldSettings.timeZoneIdentifier = "America/Los_Angeles"
+        let oldScope = CCUsageRunner.queryScope(
+            for: 30,
+            now: clock.now,
+            calendar: oldSettings.reportingCalendar
+        )
+        var newSettings = oldSettings
         newSettings.timeZoneIdentifier = "Asia/Tokyo"
         let newScope = CCUsageRunner.queryScope(
             for: 30,
@@ -1474,6 +1480,7 @@ final class RuntimeSchedulingTests: XCTestCase {
         let suiteName = "Meterlark.RuntimeSchedulingTests.TimeZoneRace.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!
         addTeardownBlock { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(oldSettings.timeZoneIdentifier, forKey: "Meterlark.timeZoneIdentifier")
         let snapshotDirectory = FileManager.default.temporaryDirectory
             .appendingPathComponent("Meterlark.RuntimeSchedulingTests.TimeZoneRace.\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: snapshotDirectory, withIntermediateDirectories: true)
