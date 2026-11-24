@@ -95,12 +95,12 @@ final class CCUsageRunner: @unchecked Sendable {
         settings: MonitorSettings,
         mode: CCUsageRunMode,
         pricingConfigURL: URL?,
-        now: Date
+        now: Date,
+        calendar: Calendar? = nil
     ) throws -> CCUsageCommand {
         let executable = try resolveExecutable()
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
-        let scope = Self.queryScope(for: settings.lookbackDays, now: now, calendar: calendar)
+        let queryCalendar = calendar ?? settings.reportingCalendar
+        let scope = Self.queryScope(for: settings.lookbackDays, now: now, calendar: queryCalendar)
 
         var args = [
             "daily",
@@ -110,7 +110,9 @@ final class CCUsageRunner: @unchecked Sendable {
             "--since",
             scope.since,
             "--until",
-            scope.until
+            scope.until,
+            "--timezone",
+            queryCalendar.timeZone.identifier
         ]
         if !mode.onlinePricing {
             args.append(contentsOf: ["--offline"])
@@ -129,11 +131,10 @@ final class CCUsageRunner: @unchecked Sendable {
         mode: CCUsageRunMode,
         pricingConfigURL: URL? = nil,
         now: Date = Date(),
-        calendar: Calendar = .current
+        calendar: Calendar? = nil
     ) throws -> CCUsageCommand {
         let executable = try resolveExecutable()
-        var queryCalendar = calendar
-        queryCalendar.timeZone = calendar.timeZone
+        let queryCalendar = calendar ?? settings.reportingCalendar
         let components = queryCalendar.dateComponents([.year, .month], from: now)
         let monthStart = queryCalendar.date(from: DateComponents(year: components.year, month: components.month, day: 1)) ?? queryCalendar.startOfDay(for: now)
         let endDate = queryCalendar.startOfDay(for: now)
@@ -153,7 +154,9 @@ final class CCUsageRunner: @unchecked Sendable {
             "--since",
             formatter.string(from: monthStart),
             "--until",
-            formatter.string(from: endDate)
+            formatter.string(from: endDate),
+            "--timezone",
+            queryCalendar.timeZone.identifier
         ]
         if !mode.onlinePricing {
             args.append("--offline")
@@ -161,7 +164,6 @@ final class CCUsageRunner: @unchecked Sendable {
         if mode.includesCost, let pricingConfigURL {
             args.append(contentsOf: ["--config", pricingConfigURL.path])
         }
-        _ = settings
         return CCUsageCommand(executable: executable, arguments: args)
     }
 
@@ -184,6 +186,7 @@ final class CCUsageRunner: @unchecked Sendable {
         let formatter = DateFormatter()
         formatter.calendar = calendar
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = calendar.timeZone
         formatter.dateFormat = "yyyy-MM-dd"
         let start = startDate(for: lookbackDays, now: now, calendar: calendar)
         let end = calendar.startOfDay(for: now)
@@ -228,8 +231,7 @@ final class CCUsageRunner: @unchecked Sendable {
         pricingContext: PricingResolutionContext
     ) throws -> UsageSnapshotBuildResult {
         let now = Date()
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
+        let calendar = settings.reportingCalendar
         let scope = Self.queryScope(
             for: settings.lookbackDays,
             now: now,
@@ -240,7 +242,8 @@ final class CCUsageRunner: @unchecked Sendable {
             settings: settings,
             mode: mode,
             pricingConfigURL: pricingConfigURL,
-            now: now
+            now: now,
+            calendar: calendar
         )
         let output = try runProcess(command)
         let decoder = JSONDecoder()
@@ -287,8 +290,7 @@ final class CCUsageRunner: @unchecked Sendable {
         now: Date,
         pricingContext: PricingResolutionContext
     ) throws -> MonthlyBudgetBuildResult {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
+        let calendar = settings.reportingCalendar
         let month = MonthlyBudgetSnapshot.monthPeriod(for: now, calendar: calendar)
         let command = try monthlyCommand(
             settings: settings,
@@ -312,6 +314,7 @@ final class CCUsageRunner: @unchecked Sendable {
             customPricingRevision: customPricingRevision,
             modelCatalogRevision: pricingContext.remoteCatalogRevision,
             realtimeAnchorDay: MonthlyBudgetSnapshot.dayPeriod(for: now, calendar: calendar),
+            timeZone: calendar.timeZone.identifier,
             pricingContext: pricingContext
         )
     }
@@ -335,6 +338,9 @@ final class CCUsageRunner: @unchecked Sendable {
         process.standardError = errorPipe
 
         var environment = ProcessInfo.processInfo.environment
+        // Official ccusage binaries collect opt-out daily adoption telemetry.
+        // Meterlark keeps its local-first behavior by disabling it explicitly.
+        environment["CCUSAGE_TELEMETRY_DISABLED"] = "1"
         let path = environment["PATH"] ?? ""
         if !path.contains("/opt/homebrew/bin") {
             environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + path

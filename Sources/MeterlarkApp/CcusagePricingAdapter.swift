@@ -69,7 +69,7 @@ struct CcusagePricingCapabilities: Equatable, Sendable {
             "gpt-6.1-sol": 272_000,
             "gpt-6.1-sol@eu": 272_000
         ],
-        // The pinned 20.0.32 native binary applies explicit zero rates,
+        // The pinned 20.1.1 native binary applies explicit zero rates,
         // including zero-bearing alternate tiers, when calculating cost.
         supportsExplicitZeroOverrides: true
     )
@@ -90,7 +90,7 @@ struct CcusagePricingCapabilities: Equatable, Sendable {
 }
 
 /// Translates the backend-neutral pricing schedule into the legacy config
-/// shape supported by bundled ccusage 20.0.32.
+/// shape supported by bundled ccusage 20.1.1.
 ///
 /// This is intentionally the only place that knows that ccusage calls its
 /// single alternate tier Above200kTokens. The canonical model retains the

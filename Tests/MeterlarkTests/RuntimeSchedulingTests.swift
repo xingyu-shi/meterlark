@@ -1455,6 +1455,67 @@ final class RuntimeSchedulingTests: XCTestCase {
         XCTAssertEqual(runner.callCount, 2)
     }
 
+    func testTimeZoneChangeCannotPublishAnOlderInFlightScope() throws {
+        let clock = TestClock()
+        var oldSettings = MonitorSettings.default
+        oldSettings.timeZoneIdentifier = "America/Los_Angeles"
+        let oldScope = CCUsageRunner.queryScope(
+            for: 30,
+            now: clock.now,
+            calendar: oldSettings.reportingCalendar
+        )
+        var newSettings = oldSettings
+        newSettings.timeZoneIdentifier = "Asia/Tokyo"
+        let newScope = CCUsageRunner.queryScope(
+            for: 30,
+            now: clock.now,
+            calendar: newSettings.reportingCalendar
+        )
+        XCTAssertNotEqual(oldScope, newScope)
+        let runner = ScopeRaceRunner(
+            first: makeScopedSnapshot(scope: oldScope, cost: 30),
+            second: makeScopedSnapshot(scope: newScope, cost: 1)
+        )
+
+        let suiteName = "Meterlark.RuntimeSchedulingTests.TimeZoneRace.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        addTeardownBlock { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set(oldSettings.timeZoneIdentifier, forKey: "Meterlark.timeZoneIdentifier")
+        let snapshotDirectory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Meterlark.RuntimeSchedulingTests.TimeZoneRace.\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: snapshotDirectory, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: snapshotDirectory) }
+        let sourceRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Meterlark.RuntimeSchedulingTests.TimeZoneRaceSource.\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: sourceRoot, withIntermediateDirectories: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: sourceRoot) }
+        let watcher = StubSourceChangeWatcher(isRunning: true)
+
+        let store = MonitorStore(
+            snapshotStore: SnapshotStore(baseURL: snapshotDirectory),
+            settingsStore: SettingsStore(defaults: defaults),
+            runner: runner,
+            sourceRootsProvider: { [sourceRoot] },
+            watcherFactory: { _, _ in watcher },
+            nowProvider: { clock.now },
+            fingerprintReader: { [] }
+        )
+
+        store.refreshNow()
+        XCTAssertEqual(runner.firstStarted.wait(timeout: .now() + 1), .success)
+        store.setTimeZoneIdentifier("Asia/Tokyo")
+        runner.releaseFirst()
+
+        let deadline = Date().addingTimeInterval(2)
+        while store.snapshot.queryScope != newScope, Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.01))
+        }
+
+        XCTAssertEqual(store.settings.timeZoneIdentifier, "Asia/Tokyo")
+        XCTAssertEqual(store.snapshot.queryScope, newScope)
+        XCTAssertEqual(runner.callCount, 2)
+    }
+
     func testScopeRolloverDuringUsageRefreshQueuesAReplacement() throws {
         let clock = TestClock()
         let oldScope = CCUsageRunner.queryScope(for: 1, now: clock.now)

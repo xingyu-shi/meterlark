@@ -421,6 +421,27 @@ final class SettingsTests: XCTestCase {
         XCTAssertTrue(MonitorSettings.allowedLookbackDays.contains(MonitorSettings.calendarMonthLookback))
     }
 
+    func testReportingTimeZoneDefaultsToSystemAndPersistsValidIANAIdentifiers() {
+        let suiteName = "Meterlark.SettingsTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let store = SettingsStore(defaults: defaults)
+        var settings = store.load()
+        XCTAssertEqual(settings.timeZoneIdentifier, MonitorSettings.systemTimeZoneIdentifier)
+        XCTAssertEqual(settings.reportingTimeZone.identifier, TimeZone.current.identifier)
+        XCTAssertEqual(MonitorSettings.normalizedTimeZoneIdentifier(" Asia/Shanghai "), "Asia/Shanghai")
+        XCTAssertNil(MonitorSettings.normalizedTimeZoneIdentifier("Not/AZone"))
+
+        settings.timeZoneIdentifier = "Asia/Shanghai"
+        store.save(settings)
+        XCTAssertEqual(store.load().timeZoneIdentifier, "Asia/Shanghai")
+        XCTAssertEqual(store.load().reportingCalendar.timeZone.identifier, "Asia/Shanghai")
+
+        defaults.set("Not/AZone", forKey: "Meterlark.timeZoneIdentifier")
+        XCTAssertEqual(store.load().timeZoneIdentifier, MonitorSettings.systemTimeZoneIdentifier)
+    }
+
     func testUsageRefreshIntervalIsMeasuredFromRefreshStart() {
         let start = Date(timeIntervalSince1970: 10_000)
 

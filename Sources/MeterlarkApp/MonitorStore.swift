@@ -88,6 +88,7 @@ private struct ActivePricingBasisCacheKey: Equatable {
 private struct MonthlyBudgetRefreshKey: Equatable {
     let month: String
     let day: String
+    let timeZone: String
     let customPricingRevision: String?
     let modelCatalogRevision: String?
     let pricingUpdatedAt: Date?
@@ -279,7 +280,7 @@ final class MonitorStore: ObservableObject {
     /// this value changes automatically reprices the cached snapshot instead
     /// of presenting a result produced by the old cost engine until the normal
     /// 24-hour pricing interval elapses.
-    private static let pricingEngineRevision = "ccusage-20.0.32-config-v4-unified-provider-overrides"
+    private static let pricingEngineRevision = "ccusage-20.1.1-config-v4-unified-provider-overrides"
     /// The watcher is the normal refresh trigger. This watchdog only covers
     /// state that cannot be delivered reliably as a file event: new roots,
     /// watcher recovery, date/pricing rollovers, and fallback scans.
@@ -502,6 +503,7 @@ final class MonitorStore: ObservableObject {
         let initialScope = CCUsageRunner.queryScope(
             for: initialSettings.lookbackDays,
             now: (nowProvider ?? { Date() })(),
+            calendar: initialSettings.reportingCalendar,
             excludedAgents: initialSettings.excludedAgents
         )
         if loadedSnapshot.hasData, loadedSnapshot.queryScope != initialScope {
@@ -588,7 +590,8 @@ final class MonitorStore: ObservableObject {
             snapshot: snapshot,
             monthlySnapshot: monthlyBudget,
             settings: settings,
-            now: currentDate
+            now: currentDate,
+            calendar: settings.reportingCalendar
         )
     }
 
@@ -1787,6 +1790,33 @@ final class MonitorStore: ObservableObject {
         )
     }
 
+    func setTimeZoneIdentifier(_ identifier: String) {
+        guard let normalized = MonitorSettings.normalizedTimeZoneIdentifier(identifier),
+              settings.timeZoneIdentifier != normalized else {
+            return
+        }
+        settings.timeZoneIdentifier = normalized
+        // A monthly calibration is grouped by calendar month and cannot be
+        // reused after changing the reporting zone.
+        monthlyBudget = nil
+        budgetSnapshotStore.remove()
+        monthlyBudgetRefreshRequested = settings.monthlyCostLimit > 0
+        lastMonthlyBudgetRefreshAttemptAt = nil
+        lastMonthlyBudgetRefreshAttemptKey = nil
+        lastMonthlyBudgetRefreshAttemptSucceeded = false
+        dirtyGeneration += 1
+        isDirty = true
+        dirtySince = dirtySince ?? currentDate
+        phase = .waiting
+        snapshot = .empty
+        lastSourceEventAt = currentDate
+        beginRefresh(
+            intent: .pricing(fallbackToOffline: true, allowEmptyCandidate: true),
+            bypassInterval: true,
+            generation: dirtyGeneration,
+        )
+    }
+
     /// Agents listed before the last filter change, so the other toggles stay
     /// visible while the rescan replaces the cleared report.
     private var agentsBeforeFilterChange: [String] = []
@@ -2141,14 +2171,15 @@ final class MonitorStore: ObservableObject {
         let monthlyCostResolution = MonthlyCostResolver.resolve(
             snapshot: snapshot,
             monthlySnapshot: monthlyBudget,
-            now: currentDate
+            now: currentDate,
+            calendar: settings.reportingCalendar
         )
         let monthlyBudgetProjectionAvailable: Bool
         let monthlyBudgetProjectionDay: String?
         switch monthlyCostResolution?.source {
         case .liveUsage:
             monthlyBudgetProjectionAvailable = true
-            monthlyBudgetProjectionDay = MonthlyBudgetSnapshot.dayPeriod(for: currentDate)
+            monthlyBudgetProjectionDay = MonthlyBudgetSnapshot.dayPeriod(for: currentDate, calendar: settings.reportingCalendar)
         case .realtimeProjection:
             monthlyBudgetProjectionAvailable = true
             monthlyBudgetProjectionDay = monthlyBudget?.realtimeAnchorDay
@@ -2291,8 +2322,9 @@ final class MonitorStore: ObservableObject {
 
     private var currentMonthlyBudgetRefreshKey: MonthlyBudgetRefreshKey {
         MonthlyBudgetRefreshKey(
-            month: MonthlyBudgetSnapshot.monthPeriod(for: currentDate),
-            day: MonthlyBudgetSnapshot.dayPeriod(for: currentDate),
+            month: MonthlyBudgetSnapshot.monthPeriod(for: currentDate, calendar: settings.reportingCalendar),
+            day: MonthlyBudgetSnapshot.dayPeriod(for: currentDate, calendar: settings.reportingCalendar),
+            timeZone: settings.reportingCalendar.timeZone.identifier,
             customPricingRevision: activeCustomPricingRevision,
             modelCatalogRevision: activeModelCatalogRevision,
             pricingUpdatedAt: pricingReferenceSnapshot.pricingUpdatedAt,
@@ -2305,6 +2337,7 @@ final class MonitorStore: ObservableObject {
         guard let monthlyBudget else { return false }
         return monthlyBudget.month == key.month
             && monthlyBudget.realtimeAnchorDay == key.day
+            && monthlyBudget.matchesTimeZone(key.timeZone)
             && monthlyBudget.customPricingRevision == key.customPricingRevision
             && monthlyBudget.modelCatalogRevision == key.modelCatalogRevision
             && monthlyBudget.pricingUpdatedAt == key.pricingUpdatedAt
@@ -2478,6 +2511,7 @@ final class MonitorStore: ObservableObject {
         let sourceChangedDuringRefresh = dirtyGeneration != dirtyGenerationAtStart
         let sourceResultIsAcceptable = !sourceChangedDuringRefresh || startedWhileDirty
         let candidateMatchesCurrentKey = candidate.month == key.month
+            && candidate.matchesTimeZone(key.timeZone)
             && candidate.customPricingRevision == key.customPricingRevision
             && candidate.modelCatalogRevision == key.modelCatalogRevision
             && candidate.pricingUpdatedAt == key.pricingUpdatedAt
@@ -3264,6 +3298,7 @@ final class MonitorStore: ObservableObject {
         CCUsageRunner.queryScope(
             for: settings.lookbackDays,
             now: currentDate,
+            calendar: settings.reportingCalendar,
             excludedAgents: settings.excludedAgents
         )
     }

@@ -463,6 +463,32 @@ final class BudgetTests: XCTestCase {
         XCTAssertEqual(resolution?.cost, 80)
     }
 
+    func testTodayUsageUsesTheSnapshotReportingTimeZone() {
+        let now = ISO8601DateFormatter().date(from: "2026-08-18T01:30:00Z")!
+        let snapshot = UsageSnapshot(
+            schemaVersion: UsageSnapshot.currentSchemaVersion,
+            generatedAt: now,
+            pricingUpdatedAt: nil,
+            queryScope: UsageQueryScope(
+                since: "2026-08-17",
+                until: "2026-08-17",
+                timeZone: "America/Los_Angeles",
+                lookbackDays: 1
+            ),
+            days: [
+                DailyUsage(period: "2026-08-17", tokens: TokenTotals(inputTokens: 1), estimatedCost: 1),
+                DailyUsage(period: "2026-08-18", tokens: TokenTotals(inputTokens: 2), estimatedCost: 2)
+            ],
+            agents: [],
+            models: [],
+            totalTokens: TokenTotals(inputTokens: 3),
+            estimatedCost: 3,
+            unknownPricingModels: []
+        )
+
+        XCTAssertEqual(snapshot.todayUsage(relativeTo: now)?.period, "2026-08-17")
+    }
+
     func testMonthlyBudgetDoesNotProjectAcrossAChangedSnapshotTimeZone() {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "America/Toronto")!
@@ -489,6 +515,7 @@ final class BudgetTests: XCTestCase {
         )
         let monthly = MonthlyBudgetSnapshot(
             month: "2026-08",
+            timeZone: calendar.timeZone.identifier,
             generatedAt: now.addingTimeInterval(-60),
             pricingUpdatedAt: nil,
             customPricingRevision: nil,
@@ -511,9 +538,68 @@ final class BudgetTests: XCTestCase {
         XCTAssertEqual(status.monthly.cost, 80)
     }
 
+    func testMonthlyBudgetFromAnotherTimeZoneIsNotUsed() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 8, day: 21, hour: 10))!
+        var settings = MonitorSettings.default
+        settings.monthlyCostLimit = 100
+        settings.timeZoneIdentifier = "Asia/Tokyo"
+        let monthly = MonthlyBudgetSnapshot(
+            month: MonthlyBudgetSnapshot.monthPeriod(for: now, calendar: calendar),
+            timeZone: "UTC",
+            generatedAt: now.addingTimeInterval(-60),
+            pricingUpdatedAt: nil,
+            customPricingRevision: nil,
+            models: [],
+            totalTokens: 10,
+            estimatedCost: 80,
+            unknownPricingModels: []
+        )
+
+        let status = BudgetStatus.evaluate(
+            snapshot: .empty,
+            monthlySnapshot: monthly,
+            settings: settings,
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertNil(status.monthly.cost)
+        XCTAssertEqual(status.monthly.level, .noData)
+    }
+
+    func testMonthlyBudgetWithoutRecordedTimeZoneIsNotReused() {
+        let now = Date(timeIntervalSince1970: 1_755_456_000)
+        let month = MonthlyBudgetSnapshot.monthPeriod(for: now)
+        var settings = MonitorSettings.default
+        settings.monthlyCostLimit = 100
+        let legacy = MonthlyBudgetSnapshot(
+            month: month,
+            timeZone: nil,
+            generatedAt: now.addingTimeInterval(-60),
+            pricingUpdatedAt: nil,
+            customPricingRevision: nil,
+            models: [],
+            totalTokens: 10,
+            estimatedCost: 80,
+            unknownPricingModels: []
+        )
+
+        let status = BudgetStatus.evaluate(
+            snapshot: .empty,
+            monthlySnapshot: legacy,
+            settings: settings,
+            now: now
+        )
+
+        XCTAssertNil(status.monthly.cost)
+        XCTAssertEqual(status.monthly.level, .noData)
+    }
+
     func testMonthlyBudgetDoesNotProjectAcrossDaysMissingFromShortUsageScope() {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: "America/Toronto")!
+        calendar.timeZone = .current
         let anchorDate = calendar.date(from: DateComponents(year: 2026, month: 8, day: 1, hour: 23))!
         let now = calendar.date(from: DateComponents(year: 2026, month: 8, day: 31, hour: 1))!
         let anchorDay = MonthlyBudgetSnapshot.dayPeriod(for: anchorDate, calendar: calendar)

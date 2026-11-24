@@ -44,14 +44,14 @@ Meterlark keeps AI coding usage, cost estimates, budgets, and provider informati
 
 | | What you get |
 | --- | --- |
-| Local-first | Reads aggregate output from `ccusage`; prompts and responses never leave the machine through this app. |
+| Local-first | Reads aggregate output from `ccusage`; prompts and responses stay local, and Meterlark disables ccusage's optional adoption telemetry. |
 | Multiple coding agents | Uses the unified `--by-agent --json` report, so new detected agent sources flow through the same view. |
 | Usage by day | One compact chart with a readable `Tokens · by Agent` / `Cost · by Model` view selector. |
 | Real detail on hover | Select a date to inspect total tokens, cost, agents, or every actual model behind the chart's `Other` bucket. |
 | Low overhead | Coalesced file events mark data dirty; a configurable scheduler starts at most one usage refresh per interval, defaulting to one minute, while whole-month budget reconciliation runs independently at a lower cadence. Model-catalog refreshes use their own hours-to-days deadline and do not reprocess the full catalog on each usage watchdog tick. |
 | Honest pricing | API-equivalent estimates are labelled; unmatched model prices stay visible as `Unknown`, and their tokens are excluded from known-cost totals and budgets with an explicit potentially-understated warning. |
 | Budget guardrails | Optional daily and natural-month USD limits turn the primary amount and menu bar red and bold at a configurable threshold (80% by default); unknown-priced usage remains visible and is reported separately even when the threshold alert is active. |
-| Personal workflow | English/中文/System language choice, Today/7/30/90-day or current-month lookback, and manual refresh controls. |
+| Personal workflow | English/中文/System language choice, Today/7/30/90-day or current-month lookback, system or custom IANA reporting time zone, and manual refresh controls. |
 | Declarative plugins | Install trusted external providers that return host-validated metric grids, progress lists, or model catalogs; configure each plugin independently and place enabled plugin blocks in the host-owned Dashboard layout without loading plugin UI code. |
 
 The external plugin package contract is documented in
@@ -92,15 +92,18 @@ precedence. Catalog changes appear in the in-app notification feed.
 
 ## Supported harness agents
 
-This source revision bundles `ccusage 20.0.32` and recognizes these local harness and agent sources. Meterlark consumes the unified `--by-agent --json` report, so a source appears when `ccusage` detects its local data:
+This source revision bundles `ccusage 20.1.1` and recognizes these local harness and agent sources. Meterlark consumes the unified `--by-agent --json` report, so a source appears when `ccusage` detects its local data:
 
 - Claude Code
 - Codex
 - OpenCode
 - Amp
 - Droid
+- Cline (`cline`)
 - Codebuff
+- DeepSeek Harness (`dsh`)
 - Hermes
+- Junie (`junie`)
 - pi-agent
 - Goose
 - Kilo
@@ -191,13 +194,14 @@ The settings button controls:
 - automatic refresh interval after source changes: 30 seconds, 1, 5, or 15 minutes; manual refresh starts immediately;
 - launch at login: off by default and configurable from Settings; macOS may require approval in System Settings → General → Login Items;
 - lookback: Today, 7 days, 30 days, 90 days, or the current calendar month;
+- reporting time zone: follows macOS by default or accepts an IANA identifier such as `Asia/Shanghai` or `UTC`; it controls date grouping, Today totals, and daily/monthly budget boundaries without changing the system clock;
 - theme: Automatic, Light, or Dark; Automatic is the default and follows macOS;
 - surface style: Solid color or native macOS Frosted glass; Solid color is the default;
 - interface text size: Standard, Large, Extra Large, and Largest at 100%, 110%, 120%, and 130%; larger presets use bounded layout adjustments, with Extra Large budget layouts at 985/995 points and Largest budget layouts at 1030/1040 points for one/both budgets;
 - popover height: Compact is 780 points with no budget, 890 points with one configured budget, and 900 points with both budgets at Standard; a custom height from 400 to 2000 points is never changed by budget settings;
 - menu bar format: defaults to `[logo]$[cost]`; use `[money:0]` for a compact four-corner frame with the amount in its center, `[money:0:plain]` or `[money:compact:plain]` to omit the currency symbol, while `[money:2]`, `[money:compact]`, and number-only `[cost]` tokens remain available. Adjacent text and cost tokens are rendered as one unit, so `$[cost:1]` does not add an artificial gap.
 - optional daily and natural-month budget limits in USD; configure both limits and the alert threshold together in the Budget alerts window, which includes a normal/alert preview. The threshold is configurable from 1% to 100% and defaults to 80%. At the configured threshold of either limit, the primary amount, menu bar amount, and budget row use a red bold alert state. A monthly query is refreshed only while a monthly limit is configured; when the usage query explicitly covers the current calendar month, the budget row reuses that same total as the current-month summary, while shorter ranges use the latest daily-adjusted whole-month result. Whole-month reconciliation runs independently at a lower cadence and has a bounded wait during a continuous source-event storm. Missing or unknown-priced data is never presented as a zero-cost confirmation; unknown-priced tokens are excluded from the displayed total and budget, so those amounts may be understated until pricing is resolved.
-- changing lookback refreshes the selected range with current pricing; if network pricing is unavailable, it falls back to the bundled offline pricing;
+- changing the lookback or reporting time zone refreshes the selected range with current pricing; if network pricing is unavailable, it falls back to the bundled offline pricing;
 - optional LiteLLM-style custom price list; during a pricing refresh the active rates are translated into an app-owned ccusage config, while ccusage remains the single cost engine. An explicit finite `0` in the imported table means known-free `$0`; omitted, `null`, invalid, or unpriced values remain `Unknown`. The compatibility path supports one alternate tier, maps ordinary non-200K thresholds approximately to ccusage’s 200K tier, preserves the selected source and backend thresholds in the model detail, and marks multi-tier estimates as approximate;
 - when a custom price list or an enabled remote model catalog is active, **Search models** in Settings → Pricing searches their union of source-aware model names, providers, routes, prices, limits, capabilities, and other preserved metadata; custom pricing wins over remote catalog pricing, and remote pricing wins over the existing ccusage/default result when the custom model is absent;
 - incomplete pricing responses cannot silently replace a valid estimate with a near-zero amount;
@@ -265,7 +269,9 @@ Tests/                       Decoder, localization, and live runner tests
 
 This is a local monitor, not a billing authority. The displayed amount is an API-equivalent estimate calculated by the bundled `ccusage`; it is not a provider subscription invoice or an internal gateway bill. A model without a matching price is not silently treated as free.
 
-The source bundle includes `ccusage 20.0.32`, licensed under MIT. See `Resources/THIRD_PARTY_NOTICES.txt`.
+Meterlark sets `CCUSAGE_TELEMETRY_DISABLED=1` for the bundled process, opting out of the official ccusage release's anonymous adoption ping.
+
+The source bundle includes `ccusage 20.1.1`, licensed under MIT. See `Resources/THIRD_PARTY_NOTICES.txt`.
 
 ## Contributing
 

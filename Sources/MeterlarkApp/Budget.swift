@@ -60,11 +60,20 @@ struct BudgetStatus: Equatable, Sendable {
         monthlySnapshot: MonthlyBudgetSnapshot?,
         settings: MonitorSettings,
         now: Date,
-        calendar: Calendar = .current
+        calendar: Calendar? = nil
     ) -> BudgetStatus {
-        let dailyUsage = snapshot.todayUsage(relativeTo: now)
+        let calendar = calendar ?? settings.reportingCalendar
+        let snapshotMatchesTimeZone: Bool
+        if let snapshotTimeZone = snapshot.queryScope?.timeZone {
+            snapshotMatchesTimeZone = snapshotTimeZone == calendar.timeZone.identifier
+        } else {
+            snapshotMatchesTimeZone = calendar.timeZone.identifier == TimeZone.current.identifier
+        }
+        let dailyUsage = snapshotMatchesTimeZone ? snapshot.todayUsage(relativeTo: now) : nil
         let currentMonth = MonthlyBudgetSnapshot.monthPeriod(for: now, calendar: calendar)
-        let monthlyUsage = monthlySnapshot?.month == currentMonth && monthlySnapshot?.hasData == true
+        let monthlyUsage = monthlySnapshot?.month == currentMonth
+            && monthlySnapshot?.hasData == true
+            && monthlySnapshot?.matchesTimeZone(calendar.timeZone.identifier) == true
             ? monthlySnapshot
             : nil
         let monthlyResolution = MonthlyCostResolver.resolve(
@@ -102,7 +111,9 @@ struct BudgetStatus: Equatable, Sendable {
 
         let currentDay = MonthlyBudgetSnapshot.dayPeriod(for: now, calendar: calendar)
         let dailyUnknownPricingModels: [String]
-        if snapshot.dailyModels.isEmpty {
+        if dailyUsage == nil {
+            dailyUnknownPricingModels = []
+        } else if snapshot.dailyModels.isEmpty {
             // Legacy snapshots may not have per-day model rows. Preserve their
             // denormalized warning rather than claiming the day is complete.
             dailyUnknownPricingModels = dailyUsage == nil ? [] : snapshot.liveUnknownPricingModels
@@ -185,6 +196,7 @@ enum MonthlyCostResolver {
 
         guard let monthlySnapshot,
               monthlySnapshot.month == month,
+              monthlySnapshot.matchesTimeZone(calendar.timeZone.identifier),
               monthlySnapshot.hasData,
               let cost = monthlySnapshot.projectedCost(using: snapshot, now: now, calendar: calendar) else {
             return nil
@@ -280,10 +292,11 @@ struct MonthlyBudgetModel: Codable, Equatable, Identifiable, Sendable {
 }
 
 struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
-    static let currentSchemaVersion = 4
+    static let currentSchemaVersion = 5
 
     let schemaVersion: Int
     let month: String
+    let timeZone: String?
     let generatedAt: Date
     let pricingUpdatedAt: Date?
     let customPricingRevision: String?
@@ -307,6 +320,12 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
         totalTokens > 0 || estimatedCost > 0 || !models.isEmpty
     }
 
+    func matchesTimeZone(_ identifier: String) -> Bool {
+        // A legacy total without a recorded zone cannot be safely reused.
+        guard let timeZone else { return false }
+        return timeZone == identifier
+    }
+
     var hasRealtimeProjection: Bool {
         realtimeAnchorDay != nil && realtimeAnchorTodayCost != nil
     }
@@ -314,6 +333,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
     init(
         schemaVersion: Int = currentSchemaVersion,
         month: String,
+        timeZone: String? = TimeZone.current.identifier,
         generatedAt: Date,
         pricingUpdatedAt: Date?,
         customPricingRevision: String?,
@@ -328,6 +348,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
     ) {
         self.schemaVersion = schemaVersion
         self.month = month
+        self.timeZone = timeZone
         self.generatedAt = generatedAt
         self.pricingUpdatedAt = pricingUpdatedAt
         self.customPricingRevision = customPricingRevision
@@ -344,6 +365,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
         case month
+        case timeZone
         case generatedAt
         case pricingUpdatedAt
         case customPricingRevision
@@ -373,6 +395,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
         // reconciliation before enabling the projection path.
         schemaVersion = Self.currentSchemaVersion
         month = try container.decode(String.self, forKey: .month)
+        timeZone = try container.decodeIfPresent(String.self, forKey: .timeZone)
         generatedAt = try container.decode(Date.self, forKey: .generatedAt)
         pricingUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .pricingUpdatedAt)
         customPricingRevision = try container.decodeIfPresent(String.self, forKey: .customPricingRevision)
@@ -391,6 +414,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
         return MonthlyBudgetSnapshot(
             schemaVersion: Self.currentSchemaVersion,
             month: month,
+            timeZone: timeZone,
             generatedAt: generatedAt,
             pricingUpdatedAt: pricingUpdatedAt,
             customPricingRevision: customPricingRevision,
@@ -429,6 +453,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
         calendar: Calendar = .current
     ) -> Double? {
         guard hasData,
+              matchesTimeZone(calendar.timeZone.identifier),
               month == Self.monthPeriod(for: now, calendar: calendar) else {
             return nil
         }
@@ -463,6 +488,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
         calendar: Calendar = .current
     ) -> Bool {
         guard hasData,
+              matchesTimeZone(calendar.timeZone.identifier),
               month == Self.monthPeriod(for: now, calendar: calendar) else {
             return false
         }
@@ -479,6 +505,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
               snapshot.hasData,
               !pricingBasisPreserved,
               snapshot.generatedAt >= generatedAt,
+              matchesTimeZone(calendar.timeZone.identifier),
               // The calibrated total and the live day must use the same
               // pricing basis. A pricing refresh invalidates projection
               // until the low-frequency monthly reconciliation catches up.
@@ -527,7 +554,8 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
         now: Date,
         calendar: Calendar = .current
     ) -> [String] {
-        guard month == Self.monthPeriod(for: now, calendar: calendar) else {
+        guard matchesTimeZone(calendar.timeZone.identifier),
+              month == Self.monthPeriod(for: now, calendar: calendar) else {
             return liveUnknownPricingModels
         }
         guard realtimeProjectionContext(using: snapshot, now: now, calendar: calendar) != nil else {
@@ -560,6 +588,7 @@ struct MonthlyBudgetSnapshot: Codable, Equatable, Sendable {
     func validate() throws {
         guard schemaVersion == Self.currentSchemaVersion,
               Self.isValidMonth(month),
+              timeZone.map({ TimeZone(identifier: $0) != nil }) ?? true,
               totalTokens >= 0,
               estimatedCost.isFinite,
               estimatedCost >= 0 else {

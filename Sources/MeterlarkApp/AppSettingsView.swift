@@ -80,6 +80,7 @@ struct AppSettingsView: View {
     let onTitleChange: (String) -> Void
     @State private var selection: AppSettingsPage? = .general
     @State private var editingBudget = false
+    @State private var timeZoneDraft = ""
 
     init(
         store: MonitorStore,
@@ -91,6 +92,9 @@ struct AppSettingsView: View {
         self.updater = updater
         self.onTitleChange = onTitleChange
         _selection = State(initialValue: initialPage)
+        _timeZoneDraft = State(initialValue: store.settings.timeZoneIdentifier == MonitorSettings.systemTimeZoneIdentifier
+            ? TimeZone.current.identifier
+            : store.settings.timeZoneIdentifier)
     }
 
     private var copy: L10n { L10n(language: store.settings.language) }
@@ -136,6 +140,11 @@ struct AppSettingsView: View {
         }
         .onChange(of: selection) { _ in updateTitle() }
         .onChange(of: store.settings.language) { _ in updateTitle() }
+        .onChange(of: store.settings.timeZoneIdentifier) { identifier in
+            timeZoneDraft = identifier == MonitorSettings.systemTimeZoneIdentifier
+                ? TimeZone.current.identifier
+                : identifier
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             store.refreshLaunchAtLoginStatus()
         }
@@ -223,6 +232,32 @@ struct AppSettingsView: View {
                         Text(intervalLabel(interval)).tag(interval)
                     }
                 }
+                Picker(copy.reportingTimeZone, selection: Binding(
+                    get: {
+                        store.settings.timeZoneIdentifier == MonitorSettings.systemTimeZoneIdentifier
+                            ? "system"
+                            : "custom"
+                    },
+                    set: setReportingTimeZoneMode
+                )) {
+                    Text(copy.systemTimeZoneLabel(TimeZone.current.identifier)).tag("system")
+                    Text(copy.customTimeZone).tag("custom")
+                }
+                if store.settings.timeZoneIdentifier != MonitorSettings.systemTimeZoneIdentifier {
+                    HStack {
+                        TextField(copy.timeZoneIdentifierPlaceholder, text: $timeZoneDraft)
+                            .textFieldStyle(.roundedBorder)
+                            .onSubmit(applyReportingTimeZone)
+                        Button(copy.applyTimeZone, action: applyReportingTimeZone)
+                            .disabled(!canApplyReportingTimeZone)
+                    }
+                    if !isValidCustomTimeZoneDraft {
+                        Text(copy.invalidTimeZone)
+                            .appFont(.caption)
+                            .foregroundStyle(AppWindowTheme.secondary)
+                    }
+                }
+                helpText(copy.reportingTimeZoneHelp)
                 helpText(copy.usageRefreshIntervalHelp)
             }
             Section(copy.monitoredAgents) {
@@ -322,6 +357,38 @@ struct AppSettingsView: View {
             intervals.append(store.settings.fingerprintCheckInterval)
         }
         return intervals
+    }
+
+    private var isValidCustomTimeZoneDraft: Bool {
+        guard let identifier = MonitorSettings.normalizedTimeZoneIdentifier(timeZoneDraft) else { return false }
+        return identifier != MonitorSettings.systemTimeZoneIdentifier
+    }
+
+    private var canApplyReportingTimeZone: Bool {
+        guard let identifier = MonitorSettings.normalizedTimeZoneIdentifier(timeZoneDraft),
+              identifier != MonitorSettings.systemTimeZoneIdentifier else {
+            return false
+        }
+        return identifier != store.settings.timeZoneIdentifier
+    }
+
+    private func setReportingTimeZoneMode(_ mode: String) {
+        if mode == "system" {
+            timeZoneDraft = TimeZone.current.identifier
+            store.setTimeZoneIdentifier(MonitorSettings.systemTimeZoneIdentifier)
+        } else if store.settings.timeZoneIdentifier == MonitorSettings.systemTimeZoneIdentifier {
+            let systemIdentifier = TimeZone.current.identifier
+            timeZoneDraft = systemIdentifier
+            store.setTimeZoneIdentifier(systemIdentifier)
+        }
+    }
+
+    private func applyReportingTimeZone() {
+        guard let identifier = MonitorSettings.normalizedTimeZoneIdentifier(timeZoneDraft),
+              identifier != MonitorSettings.systemTimeZoneIdentifier else {
+            return
+        }
+        store.setTimeZoneIdentifier(identifier)
     }
 
     private var preferredColorScheme: ColorScheme? {

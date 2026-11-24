@@ -10,7 +10,7 @@ enum AppMetadata {
     }
 
     static var bundledCCUsageVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CCUsageVersion") as? String ?? "20.0.32"
+        Bundle.main.object(forInfoDictionaryKey: "CCUsageVersion") as? String ?? "20.1.1"
     }
 
     static var bundledCCUsageSHA256: String {

@@ -11,6 +11,7 @@ final class BudgetSnapshotStoreTests: XCTestCase {
         let store = BudgetSnapshotStore(baseURL: directory)
         let snapshot = MonthlyBudgetSnapshot(
             month: "2026-08",
+            timeZone: "Asia/Tokyo",
             generatedAt: Date(timeIntervalSince1970: 100),
             pricingUpdatedAt: Date(timeIntervalSince1970: 90),
             customPricingRevision: "revision",
@@ -145,6 +146,8 @@ final class BudgetSnapshotStoreTests: XCTestCase {
         let loaded = try XCTUnwrap(store.load())
         let model = try XCTUnwrap(loaded.models.first)
         XCTAssertEqual(loaded.schemaVersion, MonthlyBudgetSnapshot.currentSchemaVersion)
+        XCTAssertNil(loaded.timeZone)
+        XCTAssertFalse(loaded.matchesTimeZone(TimeZone.current.identifier))
         XCTAssertNil(loaded.modelCatalogRevision)
         XCTAssertFalse(loaded.pricingBasisPreserved)
         XCTAssertEqual(model.pricingSource, .ccusage)
